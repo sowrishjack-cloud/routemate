@@ -1,9 +1,13 @@
 package com.example.routemate.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.routemate.R
+import com.example.routemate.models.AppSettingsState
 import com.example.routemate.models.Rider
+import com.example.routemate.ui.theme.*
 
 @Composable
 fun RiderCard(
@@ -24,6 +30,7 @@ fun RiderCard(
     onViewDetails: (Rider) -> Unit
 ) {
     var connected by remember { mutableStateOf(false) }
+    val isDark = AppSettingsState.isDarkMode
 
     val imageRes = when (rider.destination.lowercase()) {
         "pondicherry" -> R.drawable.img_pondicherry
@@ -35,7 +42,10 @@ fun RiderCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDark) DarkSurface else Color.White
+        ),
+        border = if (isDark) BorderStroke(1.dp, DarkBorder) else null,
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
@@ -62,40 +72,22 @@ fun RiderCard(
                         )
                 )
 
-                Row(
+                Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .align(Alignment.BottomStart)
+                        .padding(12.dp)
                 ) {
-                    Column {
-                        Text(
-                            rider.name,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = Color.White
-                        )
-                        Text(
-                            "${rider.destination} • ${rider.level}",
-                            color = Color(0xFF42D9F5),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    Surface(
-                        color = Color(0xFF168568),
-                        shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Text(
-                            "₹${rider.budget}",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
+                    Text(
+                        rider.destination,
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        rider.dates,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 11.sp
+                    )
                 }
             }
 
@@ -103,38 +95,73 @@ fun RiderCard(
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    "Travel Dates: ${rider.dates}",
-                    fontSize = 13.sp,
-                    color = Color(0xFF1764C0),
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            rider.name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = if (isDark) DarkTextPrimary else DeepNavy
+                        )
+                        Text(
+                            "Experience: ${rider.level}",
+                            fontSize = 12.sp,
+                            color = if (isDark) DarkTextSecondary else Color.Gray
+                        )
+                    }
+
+                    Text(
+                        "₹${rider.budget}",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 17.sp,
+                        color = if (isDark) Cyan else OceanBlue
+                    )
+                }
 
                 Text(
                     rider.description,
-                    fontSize = 13.sp,
-                    color = Color.Gray
+                    fontSize = 12.sp,
+                    color = if (isDark) DarkTextSecondary else Color.Gray,
+                    maxLines = 2
                 )
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedButton(
                         onClick = { onViewDetails(rider) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, if (isDark) Cyan else DeepNavy),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("View Details", color = Color(0xFF101D40), fontWeight = FontWeight.Bold)
+                        Text("View Ride", color = if (isDark) Cyan else DeepNavy, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(
                         onClick = { connected = !connected },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (connected) Color(0xFF168568) else Color(0xFF101D40)
-                        )
+                            containerColor = if (connected) AccentGreen else (if (isDark) Cyan else OceanBlue),
+                            contentColor = if (connected) Color.White else (if (isDark) DeepNavy else Color.White)
+                        ),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(if (connected) "Connected ✓" else "Connect", fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = if (connected) Icons.Default.Check else Icons.Default.PersonAdd,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            if (connected) "Connected" else "Connect",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.example.routemate.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,7 +12,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.routemate.components.TeamCard
+import com.example.routemate.models.AppSettingsState
 import com.example.routemate.models.Team
+import com.example.routemate.ui.theme.*
 
 val sampleTeamsList = listOf(
     Team("t1", "Coastal Weekend Crew", "Pondicherry", "Nov 8-9", "Chennai - Mahabalipuram - Pondicherry", 2500, 4, 6, "All levels", "Looking for 2 more riders.", "Chennai", "160 km", "3.5 hrs", "Mahabalipuram Toll Gate"),
@@ -24,9 +27,11 @@ val sampleTeamsList = listOf(
 fun TeamsScreen(
     onSelectTeam: (Team) -> Unit
 ) {
+    val isDark = AppSettingsState.isDarkMode
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (isDark) DarkBackground else IceBlue)
             .padding(16.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -35,12 +40,12 @@ fun TeamsScreen(
             "Complete an Existing Team",
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF101D40)
+            color = if (isDark) DarkTextPrimary else DeepNavy
         )
 
         Text(
             "Find motorcycle riding teams with open seats and travel together.",
-            color = Color.Gray
+            color = if (isDark) DarkTextSecondary else Color.Gray
         )
 
         sampleTeamsList.forEach { team ->
@@ -52,7 +57,7 @@ fun TeamsScreen(
 
         Text(
             "Trip costs and availability are sample data for this prototype.",
-            color = Color.Gray,
+            color = if (isDark) DarkTextSecondary else Color.Gray,
             fontSize = 11.sp
         )
     }

@@ -1,9 +1,13 @@
 package com.example.routemate.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.routemate.R
+import com.example.routemate.models.AppSettingsState
 import com.example.routemate.models.Team
+import com.example.routemate.ui.theme.*
 
 @Composable
 fun TeamCard(
@@ -24,6 +30,7 @@ fun TeamCard(
     onViewDetails: (Team) -> Unit
 ) {
     var requested by remember { mutableStateOf(false) }
+    val isDark = AppSettingsState.isDarkMode
 
     val imageRes = when (team.destination.lowercase()) {
         "pondicherry" -> R.drawable.img_pondicherry
@@ -35,7 +42,10 @@ fun TeamCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDark) DarkSurface else Color.White
+        ),
+        border = if (isDark) BorderStroke(1.dp, DarkBorder) else null,
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
@@ -64,21 +74,19 @@ fun TeamCard(
 
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.Bottom
+                        .align(Alignment.BottomStart)
+                        .padding(12.dp)
                 ) {
                     Text(
                         team.name,
+                        color = Color.White,
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "${team.destination} • ${team.dates}",
-                        color = Color(0xFF42D9F5),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp
+                        "${team.dates} • ${team.route}",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 11.sp
                     )
                 }
             }
@@ -87,57 +95,65 @@ fun TeamCard(
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    "Route: ${team.route}",
-                    fontSize = 13.sp,
-                    color = Color.Gray
-                )
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Estimated budget: ₹${team.budget}",
+                        "${team.members} / ${team.target} Riders Joined",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        color = Color(0xFF1764C0)
+                        color = AccentGreen
                     )
 
-                    Surface(
-                        color = Color(0xFF168568).copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            "${team.target - team.members} seats open",
-                            color = Color(0xFF168568),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
+                    Text(
+                        "₹${team.budget}",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 17.sp,
+                        color = if (isDark) Cyan else OceanBlue
+                    )
                 }
 
+                Text(
+                    team.description,
+                    fontSize = 12.sp,
+                    color = if (isDark) DarkTextSecondary else Color.Gray
+                )
+
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedButton(
                         onClick = { onViewDetails(team) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, if (isDark) Cyan else DeepNavy),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Details", color = Color(0xFF101D40), fontWeight = FontWeight.Bold)
+                        Text("View Team", color = if (isDark) Cyan else DeepNavy, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(
-                        onClick = { requested = true },
-                        modifier = Modifier.weight(1.5f),
+                        onClick = { requested = !requested },
+                        modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (requested) Color(0xFF168568) else Color(0xFF101D40)
-                        )
+                            containerColor = if (requested) AccentGreen else (if (isDark) Cyan else OceanBlue),
+                            contentColor = if (requested) Color.White else (if (isDark) DeepNavy else Color.White)
+                        ),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(if (requested) "Request sent ✓" else "Request to Join", fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = if (requested) Icons.Default.Check else Icons.Default.GroupAdd,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            if (requested) "Requested" else "Join Team",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }

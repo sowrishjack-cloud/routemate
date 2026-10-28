@@ -1,94 +1,76 @@
 package com.example.routemate.navigation
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
+import androidx.compose.foundation.pager.PagerSnapDistance
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.unit.dp
 import com.example.routemate.components.AppBottomNavigation
+import com.example.routemate.models.AppSettingsState
 import com.example.routemate.models.Rider
 import com.example.routemate.models.Team
 import com.example.routemate.screens.*
+import com.example.routemate.ui.theme.DarkBackground
+import com.example.routemate.ui.theme.IceBlue
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: "home"
+    val tabRoutes = remember { listOf("home", "match", "teams", "learn", "profile") }
+    val pagerState = rememberPagerState(pageCount = { tabRoutes.size })
+    val coroutineScope = rememberCoroutineScope()
 
     var selectedRider by remember { mutableStateOf<Rider?>(null) }
     var selectedTeam by remember { mutableStateOf<Team?>(null) }
+    var isShowingTripDetails by remember { mutableStateOf(false) }
+
+    val navigateToTab: (String) -> Unit = remember(pagerState, tabRoutes, coroutineScope) {
+        { route ->
+            val targetPageIndex = tabRoutes.indexOf(route)
+            if (targetPageIndex >= 0) {
+                coroutineScope.launch {
+                    if (kotlin.math.abs(targetPageIndex - pagerState.currentPage) > 1) {
+                        val prePage = if (targetPageIndex > pagerState.currentPage) targetPageIndex - 1 else targetPageIndex + 1
+                        pagerState.scrollToPage(prePage)
+                    }
+                    pagerState.animateScrollToPage(
+                        page = targetPageIndex,
+                        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                    )
+                }
+            }
+        }
+    }
 
     Scaffold(
-        containerColor = Color(0xFFEDF5FF),
+        containerColor = if (AppSettingsState.isDarkMode) DarkBackground else IceBlue,
         contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
-            if (currentRoute in listOf("home", "match", "teams", "learn", "profile")) {
+            if (!isShowingTripDetails) {
                 AppBottomNavigation(
-                    currentRoute = currentRoute,
-                    onNavigateToTab = { route ->
-                        navController.navigate(route) {
-                            popUpTo("home") { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                    pagerState = pagerState,
+                    tabRoutes = tabRoutes,
+                    onNavigateToTab = navigateToTab
                 )
             }
         }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = "home",
-            modifier = Modifier.padding(innerPadding)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
-            composable("home") {
-                HomeScreen(
-                    onNavigateToTab = { route ->
-                        navController.navigate(route) {
-                            popUpTo("home") { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-            }
-
-            composable("match") {
-                MatchScreen(
-                    onSelectRider = { rider ->
-                        selectedRider = rider
-                        selectedTeam = null
-                        navController.navigate("trip_details")
-                    }
-                )
-            }
-
-            composable("teams") {
-                TeamsScreen(
-                    onSelectTeam = { team ->
-                        selectedTeam = team
-                        selectedRider = null
-                        navController.navigate("trip_details")
-                    }
-                )
-            }
-
-            composable("learn") {
-                LearnScreen()
-            }
-
-            composable("profile") {
-                ProfileScreen()
-            }
-
-            composable("trip_details") {
+            if (isShowingTripDetails) {
                 val rider = selectedRider
                 val team = selectedTeam
 
@@ -117,8 +99,44 @@ fun AppNavigation() {
                     budget = budget,
                     meetingPoint = meetingPoint,
                     riderCount = riderCount,
-                    onBack = { navController.popBackStack() }
+                    onBack = { isShowingTripDetails = false }
                 )
+            } else {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = true,
+                    beyondViewportPageCount = 1,
+                    pageSpacing = 0.dp,
+                    key = { tabRoutes[it] },
+                    flingBehavior = PagerDefaults.flingBehavior(
+                        state = pagerState,
+                        pagerSnapDistance = PagerSnapDistance.atMost(1)
+                    )
+                ) { pageIndex ->
+                    when (pageIndex) {
+                        0 -> HomeScreen(
+                            onNavigateToTab = navigateToTab,
+                            isTabActive = pagerState.currentPage == 0
+                        )
+                        1 -> MatchScreen(
+                            onSelectRider = { rider ->
+                                selectedRider = rider
+                                selectedTeam = null
+                                isShowingTripDetails = true
+                            }
+                        )
+                        2 -> TeamsScreen(
+                            onSelectTeam = { team ->
+                                selectedTeam = team
+                                selectedRider = null
+                                isShowingTripDetails = true
+                            }
+                        )
+                        3 -> LearnScreen()
+                        4 -> ProfileScreen()
+                    }
+                }
             }
         }
     }

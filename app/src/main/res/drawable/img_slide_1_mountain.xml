@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="200dp"
+    android:height="120dp"
+    android:viewportWidth="400"
+    android:viewportHeight="240">
+    <path
+        android:pathData="M0,0h400v240h-400z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="400"
+                android:endY="240"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF081B38"/>
+                <item android:offset="0.5" android:color="#FF124F93"/>
+                <item android:offset="1" android:color="#FF24A8CA"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Mountain Outlines -->
+    <path
+        android:pathData="M0,150 L60,90 L130,140 L210,70 L300,150 L400,100 L400,240 L0,240 Z"
+        android:fillColor="#33000000" />
+    <path
+        android:pathData="M0,175 L90,125 L180,165 L270,105 L360,175 L400,155 L400,240 L0,240 Z"
+        android:fillColor="#44000000" />
+    <!-- Winding Mountain Road -->
+    <path
+        android:pathData="M150,240 C165,200 235,180 220,160 C205,140 250,125 235,115"
+        android:strokeColor="#FF42D9F5"
+        android:strokeWidth="14"
+        android:strokeLineCap="round"/>
+</vector>

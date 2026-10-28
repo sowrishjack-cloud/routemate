@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="200dp"
+    android:height="120dp"
+    android:viewportWidth="400"
+    android:viewportHeight="240">
+    <path
+        android:pathData="M0,0h400v240h-400z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="400"
+                android:endY="240"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF101D40"/>
+                <item android:offset="0.6" android:color="#FF1B4B82"/>
+                <item android:offset="1" android:color="#FF168568"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Rider silhouettes meeting -->
+    <path
+        android:pathData="M80,170 A12,12 0,1 0,104,170 A12,12 0,1 0,80,170 Z M70,220 C70,195 114,195 114,220 L114,240 L70,240 Z"
+        android:fillColor="#44FFFFFF"/>
+    <path
+        android:pathData="M140,165 A12,12 0,1 0,164,165 A12,12 0,1 0,140,165 Z M130,220 C130,190 174,190 174,220 L174,240 L130,240 Z"
+        android:fillColor="#66FFFFFF"/>
+    <path
+        android:pathData="M200,170 A12,12 0,1 0,224,170 A12,12 0,1 0,200,170 Z M190,220 C190,195 234,195 234,220 L234,240 L190,240 Z"
+        android:fillColor="#44FFFFFF"/>
+</vector>

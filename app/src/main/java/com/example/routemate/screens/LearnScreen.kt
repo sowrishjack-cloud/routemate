@@ -1,5 +1,6 @@
 package com.example.routemate.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,12 +12,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.routemate.components.InfoCard
+import com.example.routemate.models.AppSettingsState
+import com.example.routemate.ui.theme.*
 
 @Composable
 fun LearnScreen() {
+    val isDark = AppSettingsState.isDarkMode
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (isDark) DarkBackground else IceBlue)
             .padding(16.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -25,12 +30,12 @@ fun LearnScreen() {
             "Rider Learning Hub",
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = Color(0xFF101D40)
+            color = if (isDark) DarkTextPrimary else DeepNavy
         )
 
         Text(
             "Learn from experience. Ride with confidence.",
-            color = Color.Gray
+            color = if (isDark) DarkTextSecondary else Color.Gray
         )
 
         InfoCard(
@@ -59,18 +64,15 @@ fun LearnScreen() {
         )
 
         InfoCard(
-            "💰 Smart Budget Tips",
-            "Estimate fuel, food, accommodation, tolls and maintenance. Keep emergency money aside."
+            "🌧️ Monsoon & Night Riding",
+            "Reduce speed, increase following distance, wear high-visibility gear and keep headlights clean."
         )
 
         InfoCard(
-            "🛡️ Trust and Safety",
-            "Meet new riders in public places, verify trip details, share your route with a trusted person and avoid riding while tired."
+            "🚨 Emergency Roadside Response",
+            "Carry basic tools, puncture kit, first-aid kit and emergency contact numbers on every ride."
         )
 
-        InfoCard(
-            "📖 Real Travel Experience Library",
-            "In a future version, riders can share trip stories, actual costs, road conditions, favourite stops and lessons learned."
-        )
+        Spacer(Modifier.height(10.dp))
     }
 }

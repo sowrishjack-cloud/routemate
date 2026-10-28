@@ -1,5 +1,6 @@
 package com.example.routemate.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.routemate.R
 import com.example.routemate.components.PrimaryButton
+import com.example.routemate.models.AppSettingsState
+import com.example.routemate.ui.theme.*
 
 @Composable
 fun TripDetailsScreen(
@@ -33,6 +36,7 @@ fun TripDetailsScreen(
     onBack: () -> Unit
 ) {
     var requested by remember { mutableStateOf(false) }
+    val isDark = AppSettingsState.isDarkMode
 
     val imageRes = when (destination.lowercase()) {
         "pondicherry" -> R.drawable.img_pondicherry
@@ -45,104 +49,98 @@ fun TripDetailsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (isDark) DarkBackground else IceBlue)
             .padding(16.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        OutlinedButton(onClick = onBack) {
-            Text("← Back to Rides", color = Color(0xFF101D40), fontWeight = FontWeight.Bold)
-        }
-
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDark) DarkSurface else Color.White
+            ),
+            border = if (isDark) BorderStroke(1.dp, DarkBorder) else null,
+            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = destination,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
+            Column {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color(0xFF101D40).copy(alpha = 0.88f))
+                        .fillMaxWidth()
+                        .height(180.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = imageRes),
+                        contentDescription = destination,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.Transparent, Color(0xFF101D40).copy(alpha = 0.85f))
+                                )
                             )
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        Text(
+                            destination,
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.ExtraBold
                         )
-                )
+                        Text(
+                            "$startingPoint → $destination",
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontSize = 13.sp
+                        )
+                    }
+                }
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.Bottom
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         title,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-                    Text(
-                        "$startingPoint → $destination",
-                        fontSize = 14.sp,
-                        color = Color(0xFF42D9F5),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    "Trip Overview & Specs",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF101D40)
-                )
-
-                HorizontalDivider()
-
-                DetailRow("Starting Location", startingPoint)
-                DetailRow("Destination", destination)
-                DetailRow("Travel Date", date)
-                DetailRow("Total Distance", distance)
-                DetailRow("Estimated Duration", duration)
-                DetailRow("Trip Budget", "₹$budget")
-                DetailRow("Meeting Point", meetingPoint)
-                DetailRow("Riders Involved", riderCount)
-
-                Spacer(Modifier.height(8.dp))
-
-                PrimaryButton(
-                    text = if (requested) "Request Sent ✓" else "Request to Join Ride",
-                    onClick = { requested = true },
-                    enabled = !requested
-                )
-
-                if (requested) {
-                    Text(
-                        "Your request has been sent to the ride coordinator!",
-                        color = Color(0xFF168568),
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        color = if (isDark) DarkTextPrimary else DeepNavy
                     )
+
+                    HorizontalDivider(color = if (isDark) DarkBorder else IceBlue)
+
+                    DetailRow("Dates", date, isDark)
+                    DetailRow("Total Distance", distance, isDark)
+                    DetailRow("Estimated Duration", duration, isDark)
+                    DetailRow("Estimated Budget", "₹$budget", isDark, isHighlight = true)
+                    DetailRow("Meeting Point", meetingPoint, isDark)
+                    DetailRow("Riders", riderCount, isDark)
+
+                    Spacer(Modifier.height(8.dp))
+
+                    PrimaryButton(
+                        text = if (requested) "Requested to Join" else "Request to Join Ride",
+                        onClick = { requested = true },
+                        enabled = !requested
+                    )
+
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, if (isDark) Cyan else DeepNavy)
+                    ) {
+                        Text("← Back to Browse", color = if (isDark) Cyan else DeepNavy, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
@@ -150,12 +148,26 @@ fun TripDetailsScreen(
 }
 
 @Composable
-private fun DetailRow(label: String, value: String) {
+private fun DetailRow(
+    label: String,
+    value: String,
+    isDark: Boolean,
+    isHighlight: Boolean = false
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = Color.Gray, fontSize = 14.sp)
-        Text(value, fontWeight = FontWeight.SemiBold, color = Color(0xFF101D40), fontSize = 14.sp)
+        Text(
+            label,
+            color = if (isDark) DarkTextSecondary else Color.Gray,
+            fontSize = 13.sp
+        )
+        Text(
+            value,
+            color = if (isHighlight) (if (isDark) Cyan else OceanBlue) else (if (isDark) DarkTextPrimary else DeepNavy),
+            fontWeight = if (isHighlight) FontWeight.ExtraBold else FontWeight.Bold,
+            fontSize = 13.sp
+        )
     }
 }
