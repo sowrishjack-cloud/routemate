@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.routemate.R
+import com.example.routemate.components.ServerConfigDialog
+import com.example.routemate.data.remote.ApiConstants
 import com.example.routemate.components.InfoCard
 import com.example.routemate.models.AppSettingsState
 import com.example.routemate.ui.theme.DarkBackground
@@ -52,6 +54,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    var showServerConfig by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -367,9 +370,50 @@ fun ProfileScreen(
             CheckboxRow("I Agree to Group Riding & Safety Rules", state.agreeSafetyGuidelines, state.isEditing) { viewModel.updateAgreeSafetyGuidelines(it) }
         }
 
+        // Section 5: Backend Server Connection
+        SectionCard(title = "Backend Server Connection") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "REST API Target URL",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                    Text(
+                        ApiConstants.BASE_URL,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DeepNavy
+                    )
+                }
+
+                Button(
+                    onClick = { showServerConfig = true },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Change", fontSize = 12.sp)
+                }
+            }
+        }
+
         InfoCard(
             "Ride safely",
             "Wear protective gear, agree on meeting points, and share your trip plan with someone you trust."
+        )
+    }
+
+    if (showServerConfig) {
+        ServerConfigDialog(
+            onDismiss = { showServerConfig = false },
+            onUrlSaved = { showServerConfig = false }
         )
     }
 

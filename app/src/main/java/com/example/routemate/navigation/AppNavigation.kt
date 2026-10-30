@@ -90,6 +90,7 @@ fun AppNavigation() {
                     ?: "Group Ride"
 
                 TripDetailsScreen(
+                    tripId = rider?.id ?: team?.id ?: "1",
                     title = title,
                     startingPoint = startingPoint,
                     destination = destination,

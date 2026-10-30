@@ -21,10 +21,15 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.routemate.components.ServerConfigDialog
+import com.example.routemate.data.remote.ApiConstants
+import com.example.routemate.viewmodel.HomeViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,14 +59,29 @@ data class RecommendedRide(
     val date: String,
     val distance: String,
     val budget: Int,
-    val riders: String
+    val riders: String,
+    val tripId: String = "1",
+    val destination: String = "Pondicherry",
+    val startingPoint: String = "Chennai",
+    val duration: String = "3.5 hrs",
+    val meetingPoint: String = "ECR Toll Gate, Chennai",
+    val title: String = "Chennai → Pondicherry"
 )
 
 data class NearbyRiderItem(
     val name: String,
     val experience: String,
     val destination: String,
-    val avatarRes: Int
+    val avatarRes: Int,
+    val tripId: String = "1",
+    val dates: String = "Nov 8-9",
+    val distance: String = "160 km",
+    val duration: String = "3.5 hrs",
+    val budget: Int = 2500,
+    val startingPoint: String = "Chennai",
+    val meetingPoint: String = "ECR Toll Gate, Chennai",
+    val riderCount: String = "4 / 6 riders",
+    val title: String = "Rider Journey"
 )
 
 private data class BannerSlide(
@@ -76,28 +96,43 @@ private data class BannerSlide(
 @Composable
 fun HomeScreen(
     onNavigateToTab: (String) -> Unit,
-    isTabActive: Boolean = true
+    isTabActive: Boolean = true,
+    homeViewModel: HomeViewModel = viewModel()
 ) {
-    val destinations = listOf(
-        PopularDestination("Ooty", "Misty hills, tea estates & hairpin bends", R.drawable.img_ooty),
-        PopularDestination("Coorg", "Coffee plantations & lush green waterfalls", R.drawable.img_coorg),
-        PopularDestination("Munnar", "Endless tea valleys & cool mountain roads", R.drawable.img_munnar),
-        PopularDestination("Goa", "Coastal highways & beach sunsets", R.drawable.img_goa),
-        PopularDestination("Araku Valley", "Eastern ghats & scenic valley curves", R.drawable.img_araku)
-    )
+    val homeUiState by homeViewModel.uiState.collectAsState()
 
-    val recommendedRides = listOf(
-        RecommendedRide("Chennai → Pondicherry", "Nov 8 - 9, 2025", "160 km", 2500, "4 / 6 riders"),
-        RecommendedRide("Bengaluru → Coorg", "Nov 14 - 16, 2025", "260 km", 3800, "3 / 5 riders"),
-        RecommendedRide("Coimbatore → Ooty", "Nov 20 - 22, 2025", "85 km", 4500, "5 / 6 riders")
-    )
+    val destinations = if (homeUiState.destinations.isNotEmpty()) {
+        homeUiState.destinations
+    } else {
+        listOf(
+            PopularDestination("Ooty", "Misty hills, tea estates & hairpin bends", R.drawable.img_ooty),
+            PopularDestination("Coorg", "Coffee plantations & lush green waterfalls", R.drawable.img_coorg),
+            PopularDestination("Munnar", "Endless tea valleys & cool mountain roads", R.drawable.img_munnar),
+            PopularDestination("Goa", "Coastal highways & beach sunsets", R.drawable.img_goa),
+            PopularDestination("Araku Valley", "Eastern ghats & scenic valley curves", R.drawable.img_araku)
+        )
+    }
 
-    val nearbyRiders = listOf(
-        NearbyRiderItem("Arjun", "Experienced", "Pondicherry", R.drawable.ic_avatar_1),
-        NearbyRiderItem("Meera", "Intermediate", "Yelagiri", R.drawable.ic_avatar_2),
-        NearbyRiderItem("Karthik", "Experienced", "Ooty", R.drawable.ic_avatar_3),
-        NearbyRiderItem("Priya", "Beginner", "Chennai", R.drawable.ic_avatar_4)
-    )
+    val recommendedRides = if (homeUiState.recommendedRides.isNotEmpty()) {
+        homeUiState.recommendedRides
+    } else {
+        listOf(
+            RecommendedRide("Chennai → Pondicherry", "Nov 8 - 9, 2025", "160 km", 2500, "4 / 6 riders"),
+            RecommendedRide("Bengaluru → Coorg", "Nov 14 - 16, 2025", "260 km", 3800, "3 / 5 riders"),
+            RecommendedRide("Coimbatore → Ooty", "Nov 20 - 22, 2025", "85 km", 4500, "5 / 6 riders")
+        )
+    }
+
+    val nearbyRiders = if (homeUiState.nearbyRiders.isNotEmpty()) {
+        homeUiState.nearbyRiders
+    } else {
+        listOf(
+            NearbyRiderItem("Arjun", "Experienced", "Pondicherry", R.drawable.ic_avatar_1),
+            NearbyRiderItem("Meera", "Intermediate", "Yelagiri", R.drawable.ic_avatar_2),
+            NearbyRiderItem("Karthik", "Experienced", "Ooty", R.drawable.ic_avatar_3),
+            NearbyRiderItem("Priya", "Beginner", "Chennai", R.drawable.ic_avatar_4)
+        )
+    }
 
     val screenBg = if (AppSettingsState.isDarkMode) DarkBackground else IceBlue
 
@@ -577,6 +612,57 @@ private fun TopHeader(onNavigateToTab: (String) -> Unit) {
                                 }
                             }
                         }
+
+                        // SECTION 4: BACKEND REST API SERVER
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD)
+                            ),
+                            shape = RoundedCornerShape(16.dp),
+                            border = if (isDark) BorderStroke(1.dp, DarkBorder) else null
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Dns,
+                                        contentDescription = null,
+                                        tint = if (isDark) Cyan else OceanBlue
+                                    )
+                                    Column {
+                                        Text(
+                                            "Backend Server (PHP / MySQL)",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = titleColor
+                                        )
+                                        Text(
+                                            ApiConstants.BASE_URL,
+                                            fontSize = 11.sp,
+                                            color = subtextColor
+                                        )
+                                    }
+                                }
+
+                                Button(
+                                    onClick = { activeDialog = "server_config" },
+                                    modifier = Modifier.fillMaxWidth().height(36.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isDark) Cyan else OceanBlue,
+                                        contentColor = if (isDark) DeepNavy else Color.White
+                                    ),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Configure Server IP / Mode", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
                     }
                 },
                 confirmButton = {
@@ -591,6 +677,12 @@ private fun TopHeader(onNavigateToTab: (String) -> Unit) {
                         Text("Save & Close", fontWeight = FontWeight.Bold)
                     }
                 }
+            )
+        }
+        "server_config" -> {
+            ServerConfigDialog(
+                onDismiss = { activeDialog = null },
+                onUrlSaved = { activeDialog = null }
             )
         }
         "map" -> {

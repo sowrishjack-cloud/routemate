@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -17,13 +20,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.routemate.R
 import com.example.routemate.components.PrimaryButton
 import com.example.routemate.models.AppSettingsState
 import com.example.routemate.ui.theme.*
+import com.example.routemate.viewmodel.TripDetailsViewModel
 
 @Composable
 fun TripDetailsScreen(
+    tripId: String = "1",
     title: String,
     startingPoint: String,
     destination: String,
@@ -33,10 +39,15 @@ fun TripDetailsScreen(
     budget: Int,
     meetingPoint: String,
     riderCount: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: TripDetailsViewModel = viewModel()
 ) {
-    var requested by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
     val isDark = AppSettingsState.isDarkMode
+
+    LaunchedEffect(tripId) {
+        viewModel.checkStatus(tripId)
+    }
 
     val imageRes = when (destination.lowercase()) {
         "pondicherry" -> R.drawable.img_pondicherry
@@ -126,12 +137,49 @@ fun TripDetailsScreen(
                     DetailRow("Meeting Point", meetingPoint, isDark)
                     DetailRow("Riders", riderCount, isDark)
 
+                    if (uiState.message != null) {
+                        Surface(
+                            color = AccentGreen.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentGreen)
+                                Text(
+                                    uiState.message ?: "",
+                                    color = AccentGreen,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    if (uiState.errorMessage != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                uiState.errorMessage ?: "",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
                     Spacer(Modifier.height(8.dp))
 
                     PrimaryButton(
-                        text = if (requested) "Requested to Join" else "Request to Join Ride",
-                        onClick = { requested = true },
-                        enabled = !requested
+                        text = if (uiState.isLoading) "Submitting Request..." else if (uiState.isRequested) "Requested to Join ✓" else "Request to Join Ride",
+                        onClick = { viewModel.requestJoin(tripId) },
+                        enabled = !uiState.isRequested && !uiState.isLoading
                     )
 
                     OutlinedButton(

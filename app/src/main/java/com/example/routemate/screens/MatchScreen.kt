@@ -23,42 +23,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.routemate.components.RiderCard
+import com.example.routemate.components.ServerConfigDialog
+import com.example.routemate.data.remote.ApiConstants
+import com.example.routemate.data.remote.NetworkStateHolder
 import com.example.routemate.models.AppSettingsState
 import com.example.routemate.models.Rider
 import com.example.routemate.ui.theme.*
+import com.example.routemate.viewmodel.MatchViewModel
 import kotlin.math.roundToInt
-
-val sampleRidersList = listOf(
-    Rider("r1", "Arjun", "Pondicherry", "Nov 8-9", "Experienced", 2500, "Coastal ride and relaxed pace", "Chennai", "160 km", "3.5 hrs", "ECR Toll Gate, Chennai"),
-    Rider("r2", "Meera", "Yelagiri", "Nov 14-15", "Intermediate", 1800, "Hills and sunrise ride", "Vellore", "90 km", "2.5 hrs", "Vellore New Bus Stand"),
-    Rider("r3", "Karthik", "Ooty", "Nov 20-22", "Experienced", 4500, "Mountain roads and photography", "Coimbatore", "85 km", "3 hrs", "Mettupalayam Junction"),
-    Rider("r4", "Priya", "Chennai", "Nov 2", "Beginner", 900, "Day ride and easy pace", "Kanchipuram", "70 km", "1.5 hrs", "Silk City Highway Plaza"),
-    Rider("r5", "Rahul", "Goa", "Dec 5-8", "Intermediate", 6000, "Beach route and food stops", "Bengaluru", "560 km", "10 hrs", "Nelmangala Toll Gate"),
-    Rider("r6", "Sneha", "Coorg", "Dec 12-14", "Intermediate", 3500, "Coffee estates and winding roads", "Mysore", "120 km", "3 hrs", "Hunsur Road, Mysore"),
-    Rider("r7", "Vikram", "Munnar", "Dec 18-20", "Experienced", 5000, "Mist, tea gardens and hairpins", "Kochi", "130 km", "4 hrs", "Aluva Bypass, Kochi"),
-    Rider("r8", "Aakash", "Leh Ladakh", "Jun 10-25", "Experienced", 35000, "High altitude passes and adventure", "Delhi", "2100 km", "7 days", "Kashmir Gate, Delhi"),
-    Rider("r9", "Tanya", "Spiti Valley", "Jul 5-15", "Experienced", 28000, "Rugged terrain and monasteries", "Chandigarh", "750 km", "4 days", "Zirakpur, Chandigarh"),
-    Rider("r10", "Kiran", "Kodaikanal", "Dec 22-24", "Intermediate", 4000, "Pine forests and misty curves", "Madurai", "120 km", "3 hrs", "Mattuthavani, Madurai")
-)
 
 @Composable
 fun MatchScreen(
-    onSelectRider: (Rider) -> Unit
+    onSelectRider: (Rider) -> Unit,
+    viewModel: MatchViewModel = viewModel()
 ) {
-    var destination by remember { mutableStateOf("") }
-    var maxBudget by remember { mutableFloatStateOf(40000f) }
-    var experience by remember { mutableStateOf("Any") }
+    val uiState by viewModel.uiState.collectAsState()
     val isDark = AppSettingsState.isDarkMode
+    val isOfflineMode by NetworkStateHolder.isOfflineMode.collectAsState()
+    var showServerConfigDialog by remember { mutableStateOf(false) }
 
     val destinations = listOf("All", "Ooty", "Coorg", "Munnar", "Goa", "Pondicherry", "Yelagiri", "Kodaikanal", "Leh Ladakh", "Spiti Valley", "Chennai")
     val experienceLevels = listOf("Any", "Beginner", "Intermediate", "Experienced")
-
-    val matchingRiders = sampleRidersList.filter { rider ->
-        (destination.isBlank() || rider.destination.contains(destination, ignoreCase = true)) &&
-        (experience == "Any" || rider.level == experience) &&
-        rider.budget <= maxBudget
-    }
 
     Column(
         modifier = Modifier
@@ -68,272 +55,375 @@ fun MatchScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-            // Header Banner
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(8.dp, RoundedCornerShape(24.dp))
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF071A3C), Color(0xFF124D91), Color(0xFF20A6C9))
-                        )
+        // Header Banner
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(8.dp, RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFF071A3C), Color(0xFF124D91), Color(0xFF20A6C9))
                     )
-                    .padding(20.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "FIND YOUR RIDING PARTNER",
-                            color = Color(0xFF42D9F5),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Match with riders\nheading your way",
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            lineHeight = 26.sp
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Surface(
-                            color = Color(0xFF42D9F5).copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                "${matchingRiders.size} riders found matching your filters",
-                                color = Color(0xFF42D9F5),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF42D9F5).copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.TwoWheeler,
-                            contentDescription = null,
-                            tint = Color(0xFF42D9F5),
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
-            }
-
-            // Search & Filter Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isDark) DarkSurface else Color.White
-                ),
-                border = if (isDark) BorderStroke(1.dp, DarkBorder) else null,
-                shape = RoundedCornerShape(20.dp),
-                elevation = CardDefaults.cardElevation(3.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Text(
-                        "Search Destination",
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDark) DarkTextPrimary else DeepNavy,
-                        fontSize = 14.sp
-                    )
-
-                    OutlinedTextField(
-                        value = destination,
-                        onValueChange = { destination = it },
-                        placeholder = { Text("e.g. Ooty, Ladakh, Goa, Pondicherry...") },
-                        leadingIcon = { Icon(Icons.Default.Search, tint = if (isDark) Cyan else OceanBlue, contentDescription = null) },
-                        trailingIcon = {
-                            if (destination.isNotBlank()) {
-                                IconButton(onClick = { destination = "" }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color.Gray)
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = if (isDark) Cyan else OceanBlue,
-                            unfocusedBorderColor = if (isDark) DarkBorder else Color(0xFFE0E0E0),
-                            focusedTextColor = if (isDark) DarkTextPrimary else DeepNavy,
-                            unfocusedTextColor = if (isDark) DarkTextPrimary else DeepNavy
-                        )
-                    )
-
-                    // Destination Quick Chips
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        destinations.forEach { place ->
-                            val isSelected = if (place == "All") destination.isBlank() else destination.equals(place, ignoreCase = true)
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { destination = if (place == "All") "" else place },
-                                label = { Text(place, fontSize = 11.sp) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = if (isDark) Cyan else OceanBlue,
-                                    selectedLabelColor = if (isDark) DeepNavy else Color.White,
-                                    containerColor = if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD),
-                                    labelColor = if (isDark) DarkTextSecondary else DeepNavy
-                                )
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(color = if (isDark) DarkBorder else IceBlue)
-
-                    // Budget Slider Filter
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Max Budget",
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDark) DarkTextPrimary else DeepNavy,
-                            fontSize = 14.sp
-                        )
-                        Surface(
-                            color = AccentGreen.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text(
-                                "₹${maxBudget.roundToInt()}",
-                                color = AccentGreen,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    Slider(
-                        value = maxBudget,
-                        onValueChange = { maxBudget = it },
-                        valueRange = 1000f..40000f,
-                        steps = 38,
-                        colors = SliderDefaults.colors(
-                            thumbColor = if (isDark) Cyan else OceanBlue,
-                            activeTrackColor = if (isDark) Cyan else OceanBlue
-                        )
-                    )
-
-                    HorizontalDivider(color = if (isDark) DarkBorder else IceBlue)
-
-                    // Experience Level
-                    Text(
-                        "Riding Experience",
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDark) DarkTextPrimary else DeepNavy,
-                        fontSize = 14.sp
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        experienceLevels.forEach { level ->
-                            FilterChip(
-                                selected = experience == level,
-                                onClick = { experience = level },
-                                label = { Text(level, fontSize = 11.sp) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = if (isDark) Cyan else OceanBlue,
-                                    selectedLabelColor = if (isDark) DeepNavy else Color.White,
-                                    containerColor = if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD),
-                                    labelColor = if (isDark) DarkTextSecondary else DeepNavy
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Results Section Title
+                )
+                .padding(20.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "Matching Riders (${matchingRiders.size})",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (isDark) DarkTextPrimary else DeepNavy
-                )
-                Text(
-                    "Tap card to view ride",
-                    fontSize = 11.sp,
-                    color = if (isDark) DarkTextSecondary else Color.Gray
-                )
-            }
-
-            if (matchingRiders.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isDark) DarkSurface else Color.White
-                    ),
-                    border = if (isDark) BorderStroke(1.dp, DarkBorder) else null
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "FIND YOUR RIDING PARTNER",
+                        color = Color(0xFF42D9F5),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Match with riders\nheading your way",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 26.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(
-                            Icons.Default.SearchOff,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Text(
-                            "No riders match your filters",
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDark) DarkTextPrimary else DeepNavy
-                        )
-                        Text(
-                            "Try widening your budget or selecting 'All' destinations",
-                            fontSize = 12.sp,
-                            color = if (isDark) DarkTextSecondary else Color.Gray
-                        )
+                        Surface(
+                            color = if (isOfflineMode) Color(0xFFFA8C16).copy(alpha = 0.25f) else Color(0xFF42D9F5).copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                if (isOfflineMode) "${uiState.riders.size} riders (Offline Demo)" else "${uiState.riders.size} riders (Live MySQL)",
+                                color = if (isOfflineMode) Color(0xFFFFD591) else Color(0xFF42D9F5),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { showServerConfigDialog = true },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = "Server Settings",
+                                tint = Color(0xFF42D9F5),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
-            } else {
-                matchingRiders.forEach { rider ->
-                    RiderCard(
-                        rider = rider,
-                        onViewDetails = onSelectRider
+
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF42D9F5).copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.TwoWheeler,
+                        contentDescription = null,
+                        tint = Color(0xFF42D9F5),
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
-
-            Spacer(Modifier.height(10.dp))
         }
+
+        // Search & Filter Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDark) DarkSurface else Color.White
+            ),
+            border = if (isDark) BorderStroke(1.dp, DarkBorder) else null,
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(3.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    "Search Destination",
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) DarkTextPrimary else DeepNavy,
+                    fontSize = 14.sp
+                )
+
+                OutlinedTextField(
+                    value = uiState.destination,
+                    onValueChange = { viewModel.setDestination(it) },
+                    placeholder = { Text("e.g. Ooty, Ladakh, Goa, Pondicherry...") },
+                    leadingIcon = { Icon(Icons.Default.Search, tint = if (isDark) Cyan else OceanBlue, contentDescription = null) },
+                    trailingIcon = {
+                        if (uiState.destination.isNotBlank()) {
+                            IconButton(onClick = { viewModel.setDestination("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color.Gray)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = if (isDark) Cyan else OceanBlue,
+                        unfocusedBorderColor = if (isDark) DarkBorder else Color(0xFFE0E0E0),
+                        focusedTextColor = if (isDark) DarkTextPrimary else DeepNavy,
+                        unfocusedTextColor = if (isDark) DarkTextPrimary else DeepNavy
+                    )
+                )
+
+                // Destination Quick Chips
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    destinations.forEach { place ->
+                        val isSelected = if (place == "All") uiState.destination.isBlank() else uiState.destination.equals(place, ignoreCase = true)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { viewModel.setDestination(if (place == "All") "" else place) },
+                            label = { Text(place, fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = if (isDark) Cyan else OceanBlue,
+                                selectedLabelColor = if (isDark) DeepNavy else Color.White,
+                                containerColor = if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD),
+                                labelColor = if (isDark) DarkTextSecondary else DeepNavy
+                            )
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = if (isDark) DarkBorder else IceBlue)
+
+                // Budget Slider Filter
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Max Budget",
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) DarkTextPrimary else DeepNavy,
+                        fontSize = 14.sp
+                    )
+                    Surface(
+                        color = AccentGreen.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(
+                            "₹${uiState.maxBudget.roundToInt()}",
+                            color = AccentGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                Slider(
+                    value = uiState.maxBudget,
+                    onValueChange = { viewModel.setMaxBudget(it) },
+                    valueRange = 500f..40000f,
+                    steps = 39,
+                    colors = SliderDefaults.colors(
+                        thumbColor = if (isDark) Cyan else OceanBlue,
+                        activeTrackColor = if (isDark) Cyan else OceanBlue,
+                        inactiveTrackColor = if (isDark) DarkBorder else Color(0xFFDCE6F5)
+                    )
+                )
+
+                HorizontalDivider(color = if (isDark) DarkBorder else IceBlue)
+
+                // Experience Level Filter
+                Text(
+                    "Rider Experience Level",
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) DarkTextPrimary else DeepNavy,
+                    fontSize = 14.sp
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    experienceLevels.forEach { exp ->
+                        val isSelected = uiState.experience == exp
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { viewModel.setExperience(exp) },
+                            label = {
+                                Text(
+                                    text = exp,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = isSelected,
+                                borderColor = if (isDark) DarkBorder else Color(0xFFDCE6F5),
+                                selectedBorderColor = if (isDark) Cyan else OceanBlue
+                            ),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = if (isDark) Cyan else OceanBlue,
+                                selectedLabelColor = if (isDark) DeepNavy else Color.White,
+                                containerColor = if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD),
+                                labelColor = if (isDark) DarkTextSecondary else DeepNavy
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        // Section Title
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Available Riders (${uiState.riders.size})",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isDark) DarkTextPrimary else DeepNavy
+            )
+
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = Cyan
+                )
+            }
+        }
+
+        // Offline / Server Warning Banner (Non-blocking)
+        if (isOfflineMode || uiState.errorMessage != null) {
+            Surface(
+                color = if (isDark) Color(0xFF2C2214) else Color(0xFFFFF7E6),
+                border = BorderStroke(1.dp, if (isDark) Color(0xFF874D00) else Color(0xFFFFD591)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        Icons.Default.CloudOff,
+                        contentDescription = null,
+                        tint = Color(0xFFFA8C16),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Offline Demo Mode (Local Data)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = if (isDark) Color(0xFFFFD591) else Color(0xFFD46B08)
+                        )
+                        Text(
+                            "Backend unreachable at ${ApiConstants.BASE_URL}",
+                            fontSize = 10.sp,
+                            color = if (isDark) Color(0xFFD9D9D9) else Color(0xFF595959)
+                        )
+                    }
+                    TextButton(
+                        onClick = { showServerConfigDialog = true },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("⚙️ IP", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(
+                        onClick = { viewModel.loadRiders() },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("Retry", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        if (showServerConfigDialog) {
+            ServerConfigDialog(
+                onDismiss = { showServerConfigDialog = false },
+                onUrlSaved = { viewModel.loadRiders() }
+            )
+        }
+
+        // Riders List / Empty State
+        if (uiState.isLoading && uiState.riders.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Cyan)
+            }
+        } else if (uiState.riders.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) DarkSurface else Color.White
+                ),
+                border = if (isDark) BorderStroke(1.dp, DarkBorder) else null
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.SearchOff,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        "No riders match your filters",
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) DarkTextPrimary else DeepNavy
+                    )
+                    Text(
+                        "Try widening your budget or selecting 'All' destinations",
+                        fontSize = 12.sp,
+                        color = if (isDark) DarkTextSecondary else Color.Gray
+                    )
+                }
+            }
+        } else {
+            uiState.riders.forEach { rider ->
+                RiderCard(
+                    rider = rider,
+                    onViewDetails = onSelectRider
+                )
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+    }
 }

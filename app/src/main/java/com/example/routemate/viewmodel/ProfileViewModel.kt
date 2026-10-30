@@ -2,26 +2,32 @@ package com.example.routemate.viewmodel
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.routemate.data.remote.ProfileDto
+import com.example.routemate.data.repository.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class ProfileState(
     val photoUri: Uri? = null,
     val isEditing: Boolean = false,
     val isPreviewingPublic: Boolean = false,
+    val isLoading: Boolean = false,
+    val isSaving: Boolean = false,
 
     // Personal Information
     val fullName: String = "Arjun Kumar",
-    val email: String = "arjun.rider@example.com",
+    val email: String = "arjun@routemate.dev",
     val phoneNumber: String = "+91 98765 43210",
     val age: String = "28",
     val cityState: String = "Chennai, Tamil Nadu",
     val bio: String = "Passionate motorcycle tourer who loves coastal routes, hill climb bends, and weekend group rides.",
 
     // Riding Information
-    val ridingExperience: String = "Experienced", // Beginner, Intermediate, Experienced
+    val ridingExperience: String = "Experienced",
     val yearsExperience: String = "5",
     val motorcycleBrandModel: String = "Royal Enfield Himalayan 450",
     val motorcycleCc: String = "452",
@@ -43,8 +49,8 @@ data class ProfileState(
 
     // Safety & Preferences
     val helmetGearConfirmed: Boolean = true,
-    val emergencyContactName: String = "",
-    val emergencyContactPhone: String = "",
+    val emergencyContactName: String = "Ramesh Kumar",
+    val emergencyContactPhone: String = "+91 98765 00001",
     val preferredLanguage: String = "English / Tamil",
     val shareLiveLocation: Boolean = true,
     val agreeSafetyGuidelines: Boolean = true,
@@ -71,11 +77,65 @@ data class ProfileState(
         }
 }
 
-class ProfileViewModel : ViewModel() {
+class ProfileViewModel(
+    private val repository: ProfileRepository = ProfileRepository()
+) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileState())
     val uiState: StateFlow<ProfileState> = _uiState.asStateFlow()
 
     private var backupState: ProfileState = ProfileState()
+
+    init {
+        loadProfileFromBackend()
+    }
+
+    fun loadProfileFromBackend() {
+        _uiState.update { it.copy(isLoading = true) }
+        viewModelScope.launch {
+            val result = repository.getProfile()
+            result.fold(
+                onSuccess = { dto ->
+                    _uiState.update { current ->
+                        current.copy(
+                            fullName = dto.fullName,
+                            email = dto.email,
+                            phoneNumber = dto.phoneNumber ?: current.phoneNumber,
+                            age = dto.age?.toString() ?: current.age,
+                            cityState = dto.cityState ?: current.cityState,
+                            bio = dto.bio ?: current.bio,
+                            ridingExperience = dto.ridingExperience,
+                            yearsExperience = dto.yearsExperience.toString(),
+                            motorcycleBrandModel = dto.motorcycleBrandModel ?: current.motorcycleBrandModel,
+                            motorcycleCc = dto.motorcycleCc?.toString() ?: current.motorcycleCc,
+                            ridingStyles = if (dto.ridingStylesList.isNotEmpty()) dto.ridingStylesList else current.ridingStyles,
+                            typicalDistance = dto.typicalDistance,
+                            preferredDestinations = if (dto.preferredDestinationsList.isNotEmpty()) dto.preferredDestinationsList else current.preferredDestinations,
+                            preferredGroupSize = dto.preferredGroupSize,
+                            isOpenToNewTeams = dto.isOpenToTeams == 1,
+                            isWillingToMentor = dto.isWillingToMentor == 1,
+                            minBudget = dto.minBudget.toString(),
+                            maxBudget = dto.maxBudget.toString(),
+                            preferredDuration = dto.preferredDuration,
+                            preferredDepartureTime = dto.preferredDepartureTime,
+                            travelPace = dto.travelPace,
+                            accommodationPreference = dto.accommodationPreference,
+                            startingCity = dto.startingCity,
+                            helmetGearConfirmed = dto.helmetGearConfirmed == 1,
+                            emergencyContactName = dto.emergencyContactName ?: current.emergencyContactName,
+                            emergencyContactPhone = dto.emergencyContactPhone ?: current.emergencyContactPhone,
+                            preferredLanguage = dto.preferredLanguage,
+                            shareLiveLocation = dto.shareLiveLocation == 1,
+                            agreeSafetyGuidelines = dto.agreeSafetyGuidelines == 1,
+                            isLoading = false
+                        )
+                    }
+                },
+                onFailure = {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+            )
+        }
+    }
 
     fun onPhotoSelected(uri: Uri?) {
         _uiState.update { it.copy(photoUri = uri, successMessage = null) }
@@ -120,11 +180,61 @@ class ProfileViewModel : ViewModel() {
             return
         }
 
-        _uiState.update {
-            it.copy(
-                isEditing = false,
-                validationError = null,
-                successMessage = "Profile saved successfully for this session ✓"
+        _uiState.update { it.copy(isSaving = true, validationError = null) }
+
+        viewModelScope.launch {
+            val dto = ProfileDto(
+                fullName = currentState.fullName,
+                email = currentState.email,
+                phoneNumber = currentState.phoneNumber,
+                age = currentState.age.toIntOrNull(),
+                cityState = currentState.cityState,
+                bio = currentState.bio,
+                ridingExperience = currentState.ridingExperience,
+                yearsExperience = currentState.yearsExperience.toIntOrNull() ?: 1,
+                motorcycleBrandModel = currentState.motorcycleBrandModel,
+                motorcycleCc = currentState.motorcycleCc.toIntOrNull(),
+                ridingStyles = currentState.ridingStyles.joinToString(", "),
+                typicalDistance = currentState.typicalDistance,
+                preferredDestinations = currentState.preferredDestinations.joinToString(", "),
+                preferredGroupSize = currentState.preferredGroupSize,
+                isOpenToTeams = if (currentState.isOpenToNewTeams) 1 else 0,
+                isWillingToMentor = if (currentState.isWillingToMentor) 1 else 0,
+                minBudget = minB,
+                maxBudget = maxB,
+                preferredDuration = currentState.preferredDuration,
+                preferredDepartureTime = currentState.preferredDepartureTime,
+                travelPace = currentState.travelPace,
+                accommodationPreference = currentState.accommodationPreference,
+                startingCity = currentState.startingCity,
+                helmetGearConfirmed = if (currentState.helmetGearConfirmed) 1 else 0,
+                emergencyContactName = currentState.emergencyContactName,
+                emergencyContactPhone = currentState.emergencyContactPhone,
+                preferredLanguage = currentState.preferredLanguage,
+                shareLiveLocation = if (currentState.shareLiveLocation) 1 else 0,
+                agreeSafetyGuidelines = if (currentState.agreeSafetyGuidelines) 1 else 0
+            )
+
+            val result = repository.updateProfile(dto)
+            result.fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            isEditing = false,
+                            isSaving = false,
+                            validationError = null,
+                            successMessage = "Profile saved to MySQL backend successfully ✓"
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            validationError = error.localizedMessage ?: "Could not save profile to backend. Saved locally."
+                        )
+                    }
+                }
             )
         }
     }

@@ -27,7 +27,9 @@ import com.example.routemate.ui.theme.*
 @Composable
 fun TeamCard(
     team: Team,
-    onViewDetails: (Team) -> Unit
+    onViewDetails: (Team) -> Unit,
+    onJoinTeam: ((Team) -> Unit)? = null,
+    isJoinLoading: Boolean = false
 ) {
     var requested by remember { mutableStateOf(false) }
     val isDark = AppSettingsState.isDarkMode
@@ -135,7 +137,11 @@ fun TeamCard(
                     }
 
                     Button(
-                        onClick = { requested = !requested },
+                        onClick = {
+                            requested = true
+                            onJoinTeam?.invoke(team)
+                        },
+                        enabled = !isJoinLoading && team.members < team.target,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (requested) AccentGreen else (if (isDark) Cyan else OceanBlue),
@@ -143,17 +149,25 @@ fun TeamCard(
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(
-                            imageVector = if (requested) Icons.Default.Check else Icons.Default.GroupAdd,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            if (requested) "Requested" else "Join Team",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (isJoinLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (requested) Icons.Default.Check else Icons.Default.GroupAdd,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                if (team.members >= team.target) "Team Full" else (if (requested) "Requested" else "Join Team"),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

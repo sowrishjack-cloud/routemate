@@ -30,6 +30,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.routemate.data.remote.RetrofitClient
 import com.example.routemate.models.AppSettingsState
 import com.example.routemate.navigation.AppNavigation
 import com.example.routemate.ui.theme.RouteMateTheme
@@ -44,6 +45,7 @@ private val Muted = Color(0xFF657C9D)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        RetrofitClient.initialize(applicationContext)
         setContent {
             RouteMateTheme(darkTheme = AppSettingsState.isDarkMode) {
                 AppNavigation()
