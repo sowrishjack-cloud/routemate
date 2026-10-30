@@ -67,8 +67,12 @@ $uriPath = parse_url($requestUri, PHP_URL_PATH) ?: '/';
 // Strip leading slash and normalize
 $path = trim($uriPath, '/');
 
-// Support index.php prefix if mod_rewrite not used
-if (str_starts_with($path, 'index.php/')) {
+// Support subdirectory hosting (e.g. /routemapBE/public/api/... or /routemate/public/api/...)
+if (($apiPos = strpos($path, 'api/')) !== false) {
+    $path = substr($path, $apiPos);
+} elseif ($path === 'api' || str_ends_with($path, '/api')) {
+    $path = 'api';
+} elseif (str_starts_with($path, 'index.php/')) {
     $path = substr($path, 10);
 } elseif ($path === 'index.php') {
     $path = '';

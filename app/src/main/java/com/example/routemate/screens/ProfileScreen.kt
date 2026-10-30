@@ -3,6 +3,7 @@ package com.example.routemate.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,6 +34,8 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.routemate.R
 import com.example.routemate.components.ServerConfigDialog
 import com.example.routemate.data.remote.ApiConstants
+import androidx.compose.ui.platform.LocalContext
+import com.example.routemate.data.remote.SessionManager
 import com.example.routemate.components.InfoCard
 import com.example.routemate.models.AppSettingsState
 import com.example.routemate.ui.theme.DarkBackground
@@ -53,8 +57,11 @@ private val AccentGreen = Color(0xFF168568)
 fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager.getInstance(context) }
     val state by viewModel.uiState.collectAsState()
     var showServerConfig by remember { mutableStateOf(false) }
+    var showLogoutConfirm by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -404,6 +411,21 @@ fun ProfileScreen(
             }
         }
 
+        // Section 6: Account Session & Logout
+        OutlinedButton(
+            onClick = { showLogoutConfirm = true },
+            modifier = Modifier.fillMaxWidth().height(46.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+        ) {
+            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Log Out of RouteMate", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+
         InfoCard(
             "Ride safely",
             "Wear protective gear, agree on meeting points, and share your trip plan with someone you trust."
@@ -414,6 +436,56 @@ fun ProfileScreen(
         ServerConfigDialog(
             onDismiss = { showServerConfig = false },
             onUrlSaved = { showServerConfig = false }
+        )
+    }
+
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            containerColor = if (AppSettingsState.isDarkMode) DarkSurface else Color.White,
+            icon = {
+                Icon(
+                    Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    "Log Out of RouteMate?",
+                    fontWeight = FontWeight.Bold,
+                    color = DeepNavy
+                )
+            },
+            text = {
+                Text(
+                    "You will be signed out from your rider account. Your local session and preferences will be cleared.",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        sessionManager.clearSession()
+                        showLogoutConfirm = false
+                        AppSettingsState.activeTestNotification = "👋 Logged out from Rider Profile."
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Confirm Log Out", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 

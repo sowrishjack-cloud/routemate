@@ -14,8 +14,10 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.routemate.components.AppBottomNavigation
+import com.example.routemate.data.remote.SessionManager
 import com.example.routemate.models.AppSettingsState
 import com.example.routemate.models.Rider
 import com.example.routemate.models.Team
@@ -26,6 +28,10 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation() {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager.getInstance(context) }
+    val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
+
     val tabRoutes = remember { listOf("home", "match", "teams", "learn", "profile") }
     val pagerState = rememberPagerState(pageCount = { tabRoutes.size })
     val coroutineScope = rememberCoroutineScope()
@@ -52,90 +58,109 @@ fun AppNavigation() {
         }
     }
 
-    Scaffold(
-        containerColor = if (AppSettingsState.isDarkMode) DarkBackground else IceBlue,
-        contentWindowInsets = WindowInsets.safeDrawing,
-        bottomBar = {
-            if (!isShowingTripDetails) {
-                AppBottomNavigation(
-                    pagerState = pagerState,
-                    tabRoutes = tabRoutes,
-                    onNavigateToTab = navigateToTab
-                )
+    if (!isLoggedIn) {
+        // Full screen Login Screen when not logged in / after confirming logout
+        LoginScreen(
+            onLoginSuccess = {
+                isShowingTripDetails = false
+                coroutineScope.launch {
+                    pagerState.scrollToPage(0)
+                }
+            },
+            onContinueAsGuest = {
+                sessionManager.continueAsGuest()
+                isShowingTripDetails = false
+                coroutineScope.launch {
+                    pagerState.scrollToPage(0)
+                }
             }
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            if (isShowingTripDetails) {
-                val rider = selectedRider
-                val team = selectedTeam
-
-                val title = rider?.let { "${it.name}'s ${it.destination} Ride" }
-                    ?: team?.name
-                    ?: "RouteMate Trip Details"
-
-                val startingPoint = rider?.startingPoint ?: team?.startingPoint ?: "Chennai"
-                val destination = rider?.destination ?: team?.destination ?: "Pondicherry"
-                val date = rider?.dates ?: team?.dates ?: "Nov 8-9"
-                val distance = rider?.distance ?: team?.distance ?: "160 km"
-                val duration = rider?.duration ?: team?.duration ?: "3.5 hrs"
-                val budget = rider?.budget ?: team?.budget ?: 2500
-                val meetingPoint = rider?.meetingPoint ?: team?.meetingPoint ?: "E Toll Gate"
-                val riderCount = rider?.let { "1 rider (${it.level})" }
-                    ?: team?.let { "${it.members} of ${it.target} riders" }
-                    ?: "Group Ride"
-
-                TripDetailsScreen(
-                    tripId = rider?.id ?: team?.id ?: "1",
-                    title = title,
-                    startingPoint = startingPoint,
-                    destination = destination,
-                    date = date,
-                    distance = distance,
-                    duration = duration,
-                    budget = budget,
-                    meetingPoint = meetingPoint,
-                    riderCount = riderCount,
-                    onBack = { isShowingTripDetails = false }
-                )
-            } else {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    userScrollEnabled = true,
-                    beyondViewportPageCount = 1,
-                    pageSpacing = 0.dp,
-                    key = { tabRoutes[it] },
-                    flingBehavior = PagerDefaults.flingBehavior(
-                        state = pagerState,
-                        pagerSnapDistance = PagerSnapDistance.atMost(1)
+        )
+    } else {
+        Scaffold(
+            containerColor = if (AppSettingsState.isDarkMode) DarkBackground else IceBlue,
+            contentWindowInsets = WindowInsets.safeDrawing,
+            bottomBar = {
+                if (!isShowingTripDetails) {
+                    AppBottomNavigation(
+                        pagerState = pagerState,
+                        tabRoutes = tabRoutes,
+                        onNavigateToTab = navigateToTab
                     )
-                ) { pageIndex ->
-                    when (pageIndex) {
-                        0 -> HomeScreen(
-                            onNavigateToTab = navigateToTab,
-                            isTabActive = pagerState.currentPage == 0
+                }
+            }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                if (isShowingTripDetails) {
+                    val rider = selectedRider
+                    val team = selectedTeam
+
+                    val title = rider?.let { "${it.name}'s ${it.destination} Ride" }
+                        ?: team?.name
+                        ?: "RouteMate Trip Details"
+
+                    val startingPoint = rider?.startingPoint ?: team?.startingPoint ?: "Chennai"
+                    val destination = rider?.destination ?: team?.destination ?: "Pondicherry"
+                    val date = rider?.dates ?: team?.dates ?: "Nov 8-9"
+                    val distance = rider?.distance ?: team?.distance ?: "160 km"
+                    val duration = rider?.duration ?: team?.duration ?: "3.5 hrs"
+                    val budget = rider?.budget ?: team?.budget ?: 2500
+                    val meetingPoint = rider?.meetingPoint ?: team?.meetingPoint ?: "ECR Toll Gate, Chennai"
+                    val riderCount = rider?.let { "1 rider (${it.level})" }
+                        ?: team?.let { "${it.members} of ${it.target} riders" }
+                        ?: "Group Ride"
+
+                    TripDetailsScreen(
+                        tripId = rider?.id ?: team?.id ?: "1",
+                        title = title,
+                        startingPoint = startingPoint,
+                        destination = destination,
+                        date = date,
+                        distance = distance,
+                        duration = duration,
+                        budget = budget,
+                        meetingPoint = meetingPoint,
+                        riderCount = riderCount,
+                        onBack = { isShowingTripDetails = false }
+                    )
+                } else {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize(),
+                        userScrollEnabled = true,
+                        beyondViewportPageCount = 1,
+                        pageSpacing = 0.dp,
+                        key = { tabRoutes[it] },
+                        flingBehavior = PagerDefaults.flingBehavior(
+                            state = pagerState,
+                            pagerSnapDistance = PagerSnapDistance.atMost(1)
                         )
-                        1 -> MatchScreen(
-                            onSelectRider = { rider ->
-                                selectedRider = rider
-                                selectedTeam = null
-                                isShowingTripDetails = true
-                            }
-                        )
-                        2 -> TeamsScreen(
-                            onSelectTeam = { team ->
-                                selectedTeam = team
-                                selectedRider = null
-                                isShowingTripDetails = true
-                            }
-                        )
-                        3 -> LearnScreen()
-                        4 -> ProfileScreen()
+                    ) { pageIndex ->
+                        when (pageIndex) {
+                            0 -> HomeScreen(
+                                onNavigateToTab = navigateToTab,
+                                isTabActive = pagerState.currentPage == 0
+                            )
+                            1 -> MatchScreen(
+                                onSelectRider = { rider ->
+                                    selectedRider = rider
+                                    selectedTeam = null
+                                    isShowingTripDetails = true
+                                }
+                            )
+                            2 -> TeamsScreen(
+                                onSelectTeam = { team ->
+                                    selectedTeam = team
+                                    selectedRider = null
+                                    isShowingTripDetails = true
+                                }
+                            )
+                            3 -> LearnScreen()
+                            4 -> ProfileScreen()
+                        }
                     }
                 }
             }

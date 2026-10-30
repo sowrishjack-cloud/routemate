@@ -16,7 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -27,8 +27,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.platform.LocalContext
 import com.example.routemate.components.ServerConfigDialog
 import com.example.routemate.data.remote.ApiConstants
+import com.example.routemate.data.remote.SessionManager
 import com.example.routemate.viewmodel.HomeViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -237,6 +239,11 @@ fun HomeScreen(
 
 @Composable
 private fun TopHeader(onNavigateToTab: (String) -> Unit) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager.getInstance(context) }
+    val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
+    var showLogoutConfirm by remember { mutableStateOf(false) }
+    var showLoginDialog by remember { mutableStateOf(false) }
     var activeDialog by remember { mutableStateOf<String?>(null) }
     val isDark = AppSettingsState.isDarkMode
     val dialogBg = if (isDark) DarkSurface else Color.White
@@ -663,6 +670,104 @@ private fun TopHeader(onNavigateToTab: (String) -> Unit) {
                                 }
                             }
                         }
+
+                        // SECTION 5: ACCOUNT & AUTHENTICATION
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD)
+                            ),
+                            shape = RoundedCornerShape(16.dp),
+                            border = if (isDark) BorderStroke(1.dp, DarkBorder) else null
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .clip(CircleShape)
+                                                .background(if (isDark) Cyan.copy(alpha = 0.2f) else OceanBlue.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = null,
+                                                tint = if (isDark) Cyan else OceanBlue,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Column {
+                                            Text(
+                                                if (isLoggedIn) (sessionManager.getUserName() ?: "Arjun Kumar") else "Guest Rider",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = titleColor
+                                            )
+                                            Text(
+                                                if (isLoggedIn) (sessionManager.getUserEmail() ?: "arjun@routemate.dev") else "Not signed in",
+                                                fontSize = 11.sp,
+                                                color = subtextColor
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        color = if (isLoggedIn) AccentGreen.copy(alpha = 0.15f) else Color.Gray.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            if (isLoggedIn) "Active Rider" else "Guest Mode",
+                                            color = if (isLoggedIn) AccentGreen else Color.Gray,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(color = if (isDark) DarkBorder else Color(0xFFDCE6F5))
+
+                                if (isLoggedIn) {
+                                    Button(
+                                        onClick = { showLogoutConfirm = true },
+                                        modifier = Modifier.fillMaxWidth().height(38.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                                            contentColor = MaterialTheme.colorScheme.error
+                                        ),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
+                                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Log Out", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = { showLoginDialog = true },
+                                        modifier = Modifier.fillMaxWidth().height(38.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isDark) Cyan else OceanBlue,
+                                            contentColor = if (isDark) DeepNavy else Color.White
+                                        ),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
+                                        Icon(Icons.AutoMirrored.Filled.Login, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Sign In / Select Rider Account", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
                 confirmButton = {
@@ -763,6 +868,114 @@ private fun TopHeader(onNavigateToTab: (String) -> Unit) {
                 }
             )
         }
+    }
+
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            containerColor = dialogBg,
+            icon = {
+                Icon(
+                    Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    "Log Out of RouteMate?",
+                    fontWeight = FontWeight.Bold,
+                    color = titleColor
+                )
+            },
+            text = {
+                Text(
+                    "You will be logged out of your rider profile (${sessionManager.getUserEmail() ?: "arjun@routemate.dev"}). You can continue exploring in Guest Mode or sign back in anytime.",
+                    fontSize = 13.sp,
+                    color = subtextColor
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        activeDialog = null
+                        showLogoutConfirm = false
+                        sessionManager.clearSession()
+                        AppSettingsState.activeTestNotification = "👋 Logged out. Please sign in or continue as guest."
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Confirm Log Out", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) {
+                    Text("Cancel", color = subtextColor)
+                }
+            }
+        )
+    }
+
+    if (showLoginDialog) {
+        AlertDialog(
+            onDismissRequest = { showLoginDialog = false },
+            containerColor = dialogBg,
+            title = {
+                Text("Select Rider Account", fontWeight = FontWeight.Bold, color = titleColor)
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Choose a rider profile to sign in as:", fontSize = 12.sp, color = subtextColor)
+
+                    listOf(
+                        Triple(1, "Arjun Kumar", "arjun@routemate.dev"),
+                        Triple(2, "Meera Rao", "meera@routemate.dev"),
+                        Triple(3, "Karthik Raja", "karthik@routemate.dev"),
+                        Triple(4, "Priya Sharma", "priya@routemate.dev")
+                    ).forEach { (id, name, email) ->
+                        OutlinedButton(
+                            onClick = {
+                                sessionManager.saveAuth(
+                                    token = "jwt_token_user_$id",
+                                    userId = id,
+                                    email = email,
+                                    name = name
+                                )
+                                showLoginDialog = false
+                                AppSettingsState.activeTestNotification = "✨ Signed in as $name!"
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text(email, fontSize = 11.sp, color = subtextColor)
+                                }
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLoginDialog = false }) {
+                    Text("Cancel", color = subtextColor)
+                }
+            }
+        )
     }
 
     Row(

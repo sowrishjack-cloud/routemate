@@ -60,10 +60,10 @@ fun ServerConfigDialog(
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    "Configure the PHP REST API address for your test environment:",
+                    "Select or enter the PHP REST API target address for your test device:",
                     fontSize = 12.sp,
                     color = if (isDark) DarkTextSecondary else Color.Gray
                 )
@@ -76,7 +76,7 @@ fun ServerConfigDialog(
                         isSuccess = null
                     },
                     label = { Text("Server Base URL") },
-                    placeholder = { Text("http://192.168.x.x:8000/api/") },
+                    placeholder = { Text("http://172.23.176.203/routemapBE/public/api/") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -89,47 +89,75 @@ fun ServerConfigDialog(
                 )
 
                 Text(
-                    "Quick Presets:",
+                    "Connection Presets:",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = if (isDark) DarkTextPrimary else DeepNavy
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Preset 1: LAN Apache Port 80 (Recommended for Wi-Fi)
                     OutlinedButton(
                         onClick = {
-                            inputUrl = ApiConstants.LOCALHOST_BASE_URL
+                            inputUrl = ApiConstants.LAN_APACHE_URL
                             testStatus = null
                             isSuccess = null
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (inputUrl == ApiConstants.LAN_APACHE_URL) (if (isDark) Cyan.copy(alpha = 0.15f) else OceanBlue.copy(alpha = 0.1f)) else Color.Transparent
+                        )
                     ) {
-                        Text("🔌 USB Cable / ADB (${ApiConstants.LOCALHOST_BASE_URL})", fontSize = 11.sp)
+                        Text("🌐 Wi-Fi / Apache (Port 80) ★ Recommended", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     }
 
+                    // Preset 2: LAN Port 8000
                     OutlinedButton(
                         onClick = {
-                            inputUrl = ApiConstants.LAN_BASE_URL
+                            inputUrl = ApiConstants.LAN_PORT_8000_URL
                             testStatus = null
                             isSuccess = null
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (inputUrl == ApiConstants.LAN_PORT_8000_URL) (if (isDark) Cyan.copy(alpha = 0.15f) else OceanBlue.copy(alpha = 0.1f)) else Color.Transparent
+                        )
                     ) {
-                        Text("📡 PC LAN IP (${ApiConstants.LAN_BASE_URL})", fontSize = 11.sp)
+                        Text("⚡ Wi-Fi / PHP CLI (Port 8000)", fontSize = 11.sp)
                     }
 
+                    // Preset 3: Android Studio Desktop Emulator
                     OutlinedButton(
                         onClick = {
-                            inputUrl = ApiConstants.EMULATOR_BASE_URL
+                            inputUrl = ApiConstants.EMULATOR_PORT_8000_URL
                             testStatus = null
                             isSuccess = null
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (inputUrl == ApiConstants.EMULATOR_PORT_8000_URL) (if (isDark) Cyan.copy(alpha = 0.15f) else OceanBlue.copy(alpha = 0.1f)) else Color.Transparent
+                        )
                     ) {
-                        Text("🖥️ Android Emulator (${ApiConstants.EMULATOR_BASE_URL})", fontSize = 11.sp)
+                        Text("🖥️ Android Emulator (10.0.2.2:8000)", fontSize = 11.sp)
+                    }
+
+                    // Preset 4: USB Cable via ADB Reverse
+                    OutlinedButton(
+                        onClick = {
+                            inputUrl = ApiConstants.USB_ADB_URL
+                            testStatus = null
+                            isSuccess = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (inputUrl == ApiConstants.USB_ADB_URL) (if (isDark) Cyan.copy(alpha = 0.15f) else OceanBlue.copy(alpha = 0.1f)) else Color.Transparent
+                        )
+                    ) {
+                        Text("🔌 USB Cable / ADB Reverse (127.0.0.1:8000)", fontSize = 11.sp)
                     }
                 }
 
