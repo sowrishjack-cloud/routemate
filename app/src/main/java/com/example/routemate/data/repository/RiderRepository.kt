@@ -1,6 +1,5 @@
 package com.example.routemate.data.repository
 
-import com.example.routemate.data.local.LocalMockData
 import com.example.routemate.data.remote.NetworkStateHolder
 import com.example.routemate.data.remote.RetrofitClient
 import com.example.routemate.models.Rider
@@ -33,23 +32,21 @@ class RiderRepository {
                         startingPoint = dto.startingPoint,
                         distance = dto.distance,
                         duration = dto.duration,
-                        meetingPoint = dto.meetingPoint
+                        meetingPoint = dto.meetingPoint,
+                        isVerified = dto.isVerified
                     )
                 }
                 NetworkStateHolder.markOnline()
                 Result.success(riders)
             } else {
-                throw Exception(response.message ?: "Server returned error")
+                val errorMsg = response.message ?: "Failed to retrieve riders from backend"
+                NetworkStateHolder.markOffline(errorMsg)
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
-            // Gracefully fall back to local sample data when server is unreachable or offline
-            NetworkStateHolder.markOffline(e.localizedMessage ?: "Server unreachable")
-            val filtered = LocalMockData.sampleRiders.filter { rider ->
-                (destination.isNullOrBlank() || destination.equals("All", ignoreCase = true) || rider.destination.contains(destination, ignoreCase = true)) &&
-                (maxBudget == null || rider.budget <= maxBudget) &&
-                (level.isNullOrBlank() || level.equals("Any", ignoreCase = true) || rider.level.equals(level, ignoreCase = true))
-            }
-            Result.success(filtered)
+            val errorMsg = e.localizedMessage ?: "Failed to connect to backend server"
+            NetworkStateHolder.markOffline(errorMsg)
+            Result.failure(Exception(errorMsg, e))
         }
     }
 }

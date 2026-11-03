@@ -18,8 +18,9 @@ class LearningRepository {
                 throw Exception(response.message ?: "Failed to load learning resources")
             }
         } catch (e: Exception) {
-            NetworkStateHolder.markOffline(e.localizedMessage ?: "Server unreachable")
-            Result.success(LocalMockData.sampleLearning)
+            val errorMsg = e.localizedMessage ?: "Failed to connect to backend server"
+            NetworkStateHolder.markOffline(errorMsg)
+            Result.failure(Exception(errorMsg, e))
         }
     }
 }

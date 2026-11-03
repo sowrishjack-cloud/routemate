@@ -54,7 +54,7 @@ object ApiConstants {
      */
     fun getDefaultBaseUrl(): String {
         return if (isEmulator()) {
-            EMULATOR_PORT_8000_URL
+            EMULATOR_APACHE_URL
         } else {
             // For real physical devices, use the PC's LAN Apache port 80 URL
             LAN_APACHE_URL

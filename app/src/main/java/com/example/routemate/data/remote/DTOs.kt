@@ -39,7 +39,9 @@ data class UserDto(
     @SerializedName("age") val age: Int? = null,
     @SerializedName("city_state") val cityState: String? = null,
     @SerializedName("bio") val bio: String? = null,
-    @SerializedName("avatar_url") val avatarUrl: String? = null
+    @SerializedName("avatar_url") val avatarUrl: String? = null,
+    @SerializedName("is_verified") val isVerified: Boolean = false,
+    @SerializedName("role") val role: String = "user"
 )
 
 // Rider DTO
@@ -57,6 +59,7 @@ data class RiderDto(
     @SerializedName("meetingPoint") val meetingPoint: String,
     @SerializedName("riderCount") val riderCount: String,
     @SerializedName("avatarUrl") val avatarUrl: String? = null,
+    @SerializedName("isVerified") val isVerified: Boolean = false,
     @SerializedName("status") val status: String = "open"
 )
 
@@ -77,7 +80,8 @@ data class TeamDto(
     @SerializedName("duration") val duration: String,
     @SerializedName("meetingPoint") val meetingPoint: String,
     @SerializedName("status") val status: String = "open",
-    @SerializedName("leaderName") val leaderName: String? = null
+    @SerializedName("leaderName") val leaderName: String? = null,
+    @SerializedName("leaderIsVerified") val leaderIsVerified: Boolean = false
 )
 
 // Home Feed DTOs

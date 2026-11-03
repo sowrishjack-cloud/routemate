@@ -5,10 +5,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Sos
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,6 +44,7 @@ fun TripDetailsScreen(
     meetingPoint: String,
     riderCount: String,
     onBack: () -> Unit,
+    onOpenEmergencySos: () -> Unit = {},
     viewModel: TripDetailsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -78,7 +83,7 @@ fun TripDetailsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
+                        .height(190.dp)
                 ) {
                     Image(
                         painter = painterResource(id = imageRes),
@@ -92,10 +97,57 @@ fun TripDetailsScreen(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    listOf(Color.Transparent, Color(0xFF101D40).copy(alpha = 0.85f))
+                                    listOf(Color(0xFF101D40).copy(alpha = 0.6f), Color(0xFF101D40).copy(alpha = 0.9f))
                                 )
                             )
                     )
+
+                    // Top Action Bar overlay: Back button and Emergency SOS button
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // Red SOS Quick Action Button
+                        Button(
+                            onClick = onOpenEmergencySos,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFDC2626),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Sos,
+                                contentDescription = "Emergency SOS",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "SOS",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
 
                     Column(
                         modifier = Modifier
@@ -121,12 +173,24 @@ fun TripDetailsScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        title,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDark) DarkTextPrimary else DeepNavy
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            title,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDark) DarkTextPrimary else DeepNavy,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = "Verified Rider / Host",
+                            tint = if (isDark) Cyan else OceanBlue,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
                     HorizontalDivider(color = if (isDark) DarkBorder else IceBlue)
 
@@ -136,6 +200,7 @@ fun TripDetailsScreen(
                     DetailRow("Estimated Budget", "₹$budget", isDark, isHighlight = true)
                     DetailRow("Meeting Point", meetingPoint, isDark)
                     DetailRow("Riders", riderCount, isDark)
+                    DetailRow("Rider Verification", "Verified ✓", isDark, isHighlight = true)
 
                     if (uiState.message != null) {
                         Surface(

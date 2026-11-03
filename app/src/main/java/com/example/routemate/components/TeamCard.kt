@@ -5,9 +5,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.GroupAdd
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +33,8 @@ fun TeamCard(
     team: Team,
     onViewDetails: (Team) -> Unit,
     onJoinTeam: ((Team) -> Unit)? = null,
+    onOpenChat: ((Team) -> Unit)? = null,
+    onOpenBudget: ((Team) -> Unit)? = null,
     isJoinLoading: Boolean = false
 ) {
     var requested by remember { mutableStateOf(false) }
@@ -79,12 +85,22 @@ fun TeamCard(
                         .align(Alignment.BottomStart)
                         .padding(12.dp)
                 ) {
-                    Text(
-                        team.name,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            team.name,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (team.leaderIsVerified) {
+                            Icon(
+                                imageVector = Icons.Default.Verified,
+                                contentDescription = "Verified Leader",
+                                tint = Cyan,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                     Text(
                         "${team.dates} • ${team.route}",
                         color = Color.White.copy(alpha = 0.85f),
@@ -125,15 +141,17 @@ fun TeamCard(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
                         onClick = { onViewDetails(team) },
                         modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp),
                         border = BorderStroke(1.dp, if (isDark) Cyan else DeepNavy),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("View Team", color = if (isDark) Cyan else DeepNavy, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("View Team", color = if (isDark) Cyan else DeepNavy, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(
@@ -143,6 +161,7 @@ fun TeamCard(
                         },
                         enabled = !isJoinLoading && team.members < team.target,
                         modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (requested) AccentGreen else (if (isDark) Cyan else OceanBlue),
                             contentColor = if (requested) Color.White else (if (isDark) DeepNavy else Color.White)
@@ -159,13 +178,47 @@ fun TeamCard(
                             Icon(
                                 imageVector = if (requested) Icons.Default.Check else Icons.Default.GroupAdd,
                                 contentDescription = null,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(13.dp)
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
-                                if (team.members >= team.target) "Team Full" else (if (requested) "Requested" else "Join Team"),
-                                fontSize = 12.sp,
+                                if (team.members >= team.target) "Full" else (if (requested) "Requested" else "Join Team"),
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    if (onOpenChat != null) {
+                        IconButton(
+                            onClick = { onOpenChat(team) },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isDark) DarkBackground else IceBlue)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Chat,
+                                contentDescription = "Team Chat",
+                                tint = if (isDark) Cyan else OceanBlue,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    if (onOpenBudget != null) {
+                        IconButton(
+                            onClick = { onOpenBudget(team) },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isDark) DarkBackground else IceBlue)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AccountBalanceWallet,
+                                contentDescription = "Budget Splitter",
+                                tint = if (isDark) Cyan else OceanBlue,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }

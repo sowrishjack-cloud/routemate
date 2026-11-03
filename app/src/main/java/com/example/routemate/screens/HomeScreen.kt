@@ -32,6 +32,7 @@ import com.example.routemate.components.ServerConfigDialog
 import com.example.routemate.data.remote.ApiConstants
 import com.example.routemate.data.remote.SessionManager
 import com.example.routemate.viewmodel.HomeViewModel
+import com.example.routemate.viewmodel.RideRequestViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,6 +100,8 @@ private data class BannerSlide(
 fun HomeScreen(
     onNavigateToTab: (String) -> Unit,
     isTabActive: Boolean = true,
+    onOpenEmergencySos: () -> Unit = {},
+    onOpenIncomingRequests: () -> Unit = {},
     homeViewModel: HomeViewModel = viewModel()
 ) {
     val homeUiState by homeViewModel.uiState.collectAsState()
@@ -107,11 +110,13 @@ fun HomeScreen(
         homeUiState.destinations
     } else {
         listOf(
-            PopularDestination("Ooty", "Misty hills, tea estates & hairpin bends", R.drawable.img_ooty),
-            PopularDestination("Coorg", "Coffee plantations & lush green waterfalls", R.drawable.img_coorg),
-            PopularDestination("Munnar", "Endless tea valleys & cool mountain roads", R.drawable.img_munnar),
-            PopularDestination("Goa", "Coastal highways & beach sunsets", R.drawable.img_goa),
-            PopularDestination("Araku Valley", "Eastern ghats & scenic valley curves", R.drawable.img_araku)
+            PopularDestination("Ooty", "Misty hills, tea estates & hairpin bends", R.drawable.dest_ooty),
+            PopularDestination("Coorg", "Coffee plantations & lush green waterfalls", R.drawable.dest_coorg),
+            PopularDestination("Munnar", "Endless tea valleys & cool mountain roads", R.drawable.dest_munnar),
+            PopularDestination("Goa", "Coastal highways & beach sunsets", R.drawable.dest_goa),
+            PopularDestination("Araku Valley", "Eastern ghats & scenic valley curves", R.drawable.dest_araku),
+            PopularDestination("Pondicherry", "French colonial streets, Promenade & beaches", R.drawable.dest_pondicherry),
+            PopularDestination("Yelagiri", "Hills, winding roads & green landscapes", R.drawable.dest_yelagiri)
         )
     }
 
@@ -147,7 +152,11 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // 1. Top Header with Options Bar in top right corner
-        TopHeader(onNavigateToTab = onNavigateToTab)
+        TopHeader(
+            onNavigateToTab = onNavigateToTab,
+            onOpenEmergencySos = onOpenEmergencySos,
+            onOpenIncomingRequests = onOpenIncomingRequests
+        )
 
         // Test Notification Live Banner if triggered
         AnimatedVisibility(
@@ -238,10 +247,21 @@ fun HomeScreen(
 }
 
 @Composable
-private fun TopHeader(onNavigateToTab: (String) -> Unit) {
+private fun TopHeader(
+    onNavigateToTab: (String) -> Unit,
+    onOpenEmergencySos: () -> Unit = {},
+    onOpenIncomingRequests: () -> Unit = {}
+) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager.getInstance(context) }
     val isLoggedIn by sessionManager.isLoggedIn.collectAsState()
+    val rideRequestViewModel: RideRequestViewModel = viewModel()
+    val reqState by rideRequestViewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        rideRequestViewModel.loadPendingCount()
+    }
+
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showLoginDialog by remember { mutableStateOf(false) }
     var activeDialog by remember { mutableStateOf<String?>(null) }
@@ -1026,24 +1046,51 @@ private fun TopHeader(onNavigateToTab: (String) -> Unit) {
 
         Spacer(Modifier.width(8.dp))
 
-        // Options bar from first attachment placed in top right corner
+        // Prominent Red Emergency SOS Button & Options bar
         Row(
-            modifier = Modifier
-                .shadow(6.dp, RoundedCornerShape(24.dp))
-                .clip(RoundedCornerShape(24.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        if (isDark) listOf(DarkPillStart, DarkPillEnd) else listOf(Color(0xFF061733), Color(0xFF0C3767))
-                    )
-                )
-                .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            HeaderActionIcon(Icons.Default.Settings, "Settings") { activeDialog = "settings" }
-            HeaderActionIcon(Icons.Default.Map, "Map") { activeDialog = "map" }
-            HeaderActionIcon(Icons.Default.Notifications, "Notifications") { activeDialog = "notifications" }
-            HeaderActionIcon(Icons.Default.Navigation, "Navigation") { activeDialog = "navigation" }
+            Surface(
+                onClick = onOpenEmergencySos,
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFD32F2F),
+                shadowElevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Emergency SOS",
+                        tint = Color.White,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text("SOS", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                }
+            }
+
+            // Options bar from first attachment placed in top right corner
+            Row(
+                modifier = Modifier
+                    .shadow(6.dp, RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            if (isDark) listOf(DarkPillStart, DarkPillEnd) else listOf(Color(0xFF061733), Color(0xFF0C3767))
+                        )
+                    )
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                HeaderActionIcon(Icons.Default.Settings, "Settings") { activeDialog = "settings" }
+                HeaderActionIcon(Icons.Default.Map, "Map") { activeDialog = "map" }
+                HeaderActionIcon(Icons.Default.Notifications, "Notifications", badgeCount = reqState.pendingCount) { onOpenIncomingRequests() }
+                HeaderActionIcon(Icons.Default.Navigation, "Navigation") { activeDialog = "navigation" }
+            }
         }
     }
 }
@@ -1056,18 +1103,30 @@ private fun Modifier.scale(scale: Float): Modifier = this.then(
 private fun HeaderActionIcon(
     icon: ImageVector,
     description: String,
+    badgeCount: Int = 0,
     onClick: () -> Unit
 ) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.size(32.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            tint = Cyan,
-            modifier = Modifier.size(17.dp)
-        )
+    Box(contentAlignment = Alignment.TopEnd) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = description,
+                tint = Cyan,
+                modifier = Modifier.size(17.dp)
+            )
+        }
+        if (badgeCount > 0) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE53935))
+                    .align(Alignment.TopEnd)
+            )
+        }
     }
 }
 
@@ -1365,23 +1424,36 @@ private fun QuickCard(
 private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
     val isDark = AppSettingsState.isDarkMode
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            "Popular Destinations",
-            fontSize = 19.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isDark) DarkTextPrimary else DeepNavy
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Popular Destinations",
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isDark) DarkTextPrimary else DeepNavy
+            )
+            Text(
+                "Scenic routes",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (isDark) Cyan else OceanBlue
+            )
+        }
 
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
         ) {
             items(destinations) { destination ->
                 Card(
                     modifier = Modifier
-                        .width(180.dp)
-                        .height(140.dp),
+                        .width(200.dp)
+                        .height(150.dp),
                     shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Image(
@@ -1391,14 +1463,17 @@ private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
                             modifier = Modifier.fillMaxSize()
                         )
 
+                        // Subtle dark gradient overlay so text remains readable
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
                                     Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color.Transparent,
-                                            DeepNavy.copy(alpha = 0.85f)
+                                        colorStops = arrayOf(
+                                            0.0f to Color.Transparent,
+                                            0.4f to Color.Black.copy(alpha = 0.15f),
+                                            0.7f to DeepNavy.copy(alpha = 0.75f),
+                                            1.0f to DeepNavy.copy(alpha = 0.95f)
                                         )
                                     )
                                 )
@@ -1407,20 +1482,22 @@ private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(12.dp),
+                                .padding(14.dp),
                             verticalArrangement = Arrangement.Bottom
                         ) {
                             Text(
                                 destination.name,
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.ExtraBold,
                                 color = Color.White
                             )
+                            Spacer(Modifier.height(2.dp))
                             Text(
                                 destination.description,
-                                fontSize = 10.sp,
-                                color = Color.White.copy(alpha = 0.8f),
-                                maxLines = 2
+                                fontSize = 11.sp,
+                                color = Color.White.copy(alpha = 0.88f),
+                                maxLines = 2,
+                                lineHeight = 14.sp
                             )
                         }
                     }

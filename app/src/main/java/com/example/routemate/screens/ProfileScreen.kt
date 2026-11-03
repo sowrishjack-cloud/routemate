@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,19 +25,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.routemate.R
+import com.example.routemate.components.InfoCard
 import com.example.routemate.components.ServerConfigDialog
 import com.example.routemate.data.remote.ApiConstants
-import androidx.compose.ui.platform.LocalContext
 import com.example.routemate.data.remote.SessionManager
-import com.example.routemate.components.InfoCard
 import com.example.routemate.models.AppSettingsState
 import com.example.routemate.ui.theme.DarkBackground
 import com.example.routemate.ui.theme.DarkBorder
@@ -44,7 +46,10 @@ import com.example.routemate.ui.theme.DarkSurface
 import com.example.routemate.ui.theme.DarkSurfaceVariant
 import com.example.routemate.ui.theme.DarkTextPrimary
 import com.example.routemate.ui.theme.DarkTextSecondary
+import com.example.routemate.viewmodel.EmergencyViewModel
 import com.example.routemate.viewmodel.ProfileViewModel
+import com.example.routemate.viewmodel.ReviewsViewModel
+import com.example.routemate.viewmodel.VerificationViewModel
 
 private val DeepNavy: Color @Composable get() = if (AppSettingsState.isDarkMode) DarkTextPrimary else Color(0xFF101D40)
 private val OceanBlue: Color @Composable get() = if (AppSettingsState.isDarkMode) Cyan else Color(0xFF1764C0)
@@ -55,13 +60,38 @@ private val AccentGreen = Color(0xFF168568)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
-    viewModel: ProfileViewModel = viewModel()
+    viewModel: ProfileViewModel = viewModel(),
+    verificationViewModel: VerificationViewModel = viewModel(),
+    reviewsViewModel: ReviewsViewModel = viewModel(),
+    emergencyViewModel: EmergencyViewModel = viewModel(),
+    onOpenVerification: () -> Unit = {},
+    onOpenReviews: (userId: Int, userName: String) -> Unit = { _, _ -> },
+    onOpenEmergencySos: () -> Unit = {},
+    onOpenEmergencyHistory: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager.getInstance(context) }
     val state by viewModel.uiState.collectAsState()
+    val verificationState by verificationViewModel.uiState.collectAsState()
+    val reviewsState by reviewsViewModel.uiState.collectAsState()
+    val emergencyState by emergencyViewModel.uiState.collectAsState()
+
+    val currentUserId = remember { sessionManager.getUserId() }
+    val currentUserName = remember { sessionManager.getUserName() ?: "Arjun Kumar" }
+
+    val isDark = AppSettingsState.isDarkMode
     var showServerConfig by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
+    var showAddContactDialog by remember { mutableStateOf(false) }
+    var editingContact by remember { mutableStateOf<com.example.routemate.data.remote.EmergencyContactDto?>(null) }
+
+    LaunchedEffect(Unit) {
+        verificationViewModel.loadStatus(showLoader = false)
+        emergencyViewModel.loadContacts()
+        if (currentUserId > 0) {
+            reviewsViewModel.loadRiderReviews(currentUserId, showLoader = false)
+        }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -71,12 +101,13 @@ fun ProfileScreen(
         }
     }
 
+    // Single unified vertical scrolling container with ample bottom clearance for bottom nav
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(if (AppSettingsState.isDarkMode) DarkBackground else IceBlue)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+            .background(if (isDark) DarkBackground else IceBlue)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Top Title & Profile Completeness Progress
@@ -95,14 +126,14 @@ fun ProfileScreen(
                 Text(
                     "Manage your rider specs, bike info & trip budget",
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = if (isDark) DarkTextSecondary else Color.Gray
                 )
             }
 
             Spacer(Modifier.width(12.dp))
 
             Surface(
-                color = IceBlue,
+                color = if (isDark) DarkSurfaceVariant else IceBlue,
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
@@ -124,14 +155,14 @@ fun ProfileScreen(
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp)),
             color = Cyan,
-            trackColor = IceBlue
+            trackColor = if (isDark) DarkSurfaceVariant else IceBlue
         )
 
-        // Photo Header & Avatar
+        // Photo Header & Avatar Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = if (AppSettingsState.isDarkMode) DarkSurface else Color.White),
-        border = if (AppSettingsState.isDarkMode) androidx.compose.foundation.BorderStroke(1.dp, DarkBorder) else null,
+            colors = CardDefaults.cardColors(containerColor = if (isDark) DarkSurface else Color.White),
+            border = if (isDark) BorderStroke(1.dp, DarkBorder) else null,
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
         ) {
@@ -150,7 +181,7 @@ fun ProfileScreen(
                             .size(110.dp)
                             .clip(CircleShape)
                             .border(4.dp, Cyan, CircleShape)
-                            .background(IceBlue),
+                            .background(if (isDark) DarkSurfaceVariant else IceBlue),
                         contentAlignment = Alignment.Center
                     ) {
                         if (state.photoUri != null) {
@@ -176,8 +207,8 @@ fun ProfileScreen(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
                         },
-                        containerColor = DeepNavy,
-                        contentColor = Color.White,
+                        containerColor = if (isDark) Cyan else DeepNavy,
+                        contentColor = if (isDark) DeepNavy else Color.White,
                         shape = CircleShape,
                         modifier = Modifier.size(36.dp)
                     ) {
@@ -189,12 +220,25 @@ fun ProfileScreen(
                     }
                 }
 
-                Text(
-                    state.fullName.ifBlank { "Solo Rider" },
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = DeepNavy
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        state.fullName.ifBlank { "Solo Rider" },
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepNavy
+                    )
+                    if (verificationState.status.isVerified || verificationState.status.verificationStatus.equals("approved", ignoreCase = true)) {
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = "Verified Rider",
+                            tint = if (isDark) Cyan else OceanBlue,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
 
                 Text(
                     "${state.motorcycleBrandModel} • ${state.cityState}",
@@ -202,6 +246,48 @@ fun ProfileScreen(
                     color = OceanBlue,
                     fontWeight = FontWeight.Medium
                 )
+
+                // Rider Ratings summary pill
+                Surface(
+                    onClick = { onOpenReviews(currentUserId, currentUserName) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD),
+                    border = BorderStroke(1.dp, if (isDark) DarkBorder else Color(0xFFD6E4F5))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = Color(0xFFFFB800),
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = if (reviewsState.summary.totalReviews > 0)
+                                String.format(java.util.Locale.US, "%.1f", reviewsState.summary.averageRating)
+                            else
+                                "New Rider",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepNavy
+                        )
+                        Text(
+                            text = "(${reviewsState.summary.totalReviews} reviews)",
+                            fontSize = 11.sp,
+                            color = OceanBlue,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = OceanBlue,
+                            modifier = Modifier.size(9.dp)
+                        )
+                    }
+                }
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -211,16 +297,18 @@ fun ProfileScreen(
                         Button(
                             onClick = { viewModel.saveProfile() },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = DeepNavy)
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Cyan else DeepNavy),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Save", fontWeight = FontWeight.Bold)
+                            Text("Save", fontWeight = FontWeight.Bold, color = if (isDark) DeepNavy else Color.White)
                         }
 
                         OutlinedButton(
                             onClick = { viewModel.cancelEditing() },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("Cancel", color = DeepNavy, fontWeight = FontWeight.SemiBold)
                         }
@@ -228,16 +316,18 @@ fun ProfileScreen(
                         Button(
                             onClick = { viewModel.startEditing() },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = DeepNavy)
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Cyan else DeepNavy),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isDark) DeepNavy else Color.White)
                             Spacer(Modifier.width(4.dp))
-                            Text("Edit Profile", fontWeight = FontWeight.Bold)
+                            Text("Edit Profile", fontWeight = FontWeight.Bold, color = if (isDark) DeepNavy else Color.White)
                         }
 
                         OutlinedButton(
                             onClick = { viewModel.togglePublicPreview(true) },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
@@ -293,6 +383,243 @@ fun ProfileScreen(
             }
         }
 
+        // Rider Verification Card
+        SectionCard(title = "Rider Verification") {
+            val verStatus = verificationState.status.verificationStatus.lowercase()
+            val isVerified = verificationState.status.isVerified || verStatus == "approved"
+
+            when {
+                isVerified -> {
+                    Surface(
+                        color = AccentGreen.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, AccentGreen.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.VerifiedUser,
+                                contentDescription = "Verified",
+                                tint = AccentGreen,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Verified Rider Status: Approved ✓",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = AccentGreen
+                                )
+                                Text(
+                                    "Your driving licence and rider credentials have been verified by RouteMate administrators.",
+                                    fontSize = 12.sp,
+                                    color = if (isDark) DarkTextSecondary else Color.Gray,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = onOpenVerification,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, AccentGreen)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("View Verification Details", color = AccentGreen, fontWeight = FontWeight.Bold)
+                    }
+                }
+                verStatus == "pending" -> {
+                    Surface(
+                        color = Color(0xFFF59E0B).copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = "Pending",
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Verification Under Review",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFFD97706)
+                                )
+                                Text(
+                                    "Your documents have been submitted and are being reviewed by administrators. Average approval time is 2-4 hours.",
+                                    fontSize = 12.sp,
+                                    color = if (isDark) DarkTextSecondary else Color.Gray,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+                    Button(
+                        onClick = onOpenVerification,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Check Verification Status", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+                verStatus == "rejected" -> {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ErrorOutline,
+                                contentDescription = "Rejected",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Verification Rejected",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Text(
+                                    verificationState.status.rejectionReason?.let { "Reason: $it" }
+                                        ?: "Document details could not be validated. Please resubmit clear photos of your driving licence.",
+                                    fontSize = 12.sp,
+                                    color = if (isDark) DarkTextSecondary else Color.Gray,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+                    Button(
+                        onClick = onOpenVerification,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Re-submit Verification Documents", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+                else -> {
+                    Surface(
+                        color = (if (isDark) Cyan else OceanBlue).copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, (if (isDark) Cyan else OceanBlue).copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = "Verify Badge",
+                                tint = if (isDark) Cyan else OceanBlue,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Get Verified on RouteMate",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = DeepNavy
+                                )
+                                Text(
+                                    "Earn the Verified Rider badge to build trust in group rides, join exclusive tours, and mentor beginner riders.",
+                                    fontSize = 12.sp,
+                                    color = if (isDark) DarkTextSecondary else Color.Gray,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+                    Button(
+                        onClick = onOpenVerification,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Cyan else OceanBlue),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Verified, contentDescription = null, tint = if (isDark) DeepNavy else Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Verify Profile & Licence", color = if (isDark) DeepNavy else Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Rider Ratings & Reviews Card
+        SectionCard(title = "Ratings & Reviews") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            if (reviewsState.summary.totalReviews > 0)
+                                String.format(java.util.Locale.US, "%.1f", reviewsState.summary.averageRating)
+                            else
+                                "5.0",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = DeepNavy
+                        )
+                        Column {
+                            Row {
+                                repeat(5) { index ->
+                                    val filled = index < reviewsState.summary.averageRating.toInt()
+                                    Icon(
+                                        imageVector = if (filled) Icons.Default.Star else Icons.Default.StarOutline,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFB800),
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                "${reviewsState.summary.totalReviews} verified reviews",
+                                fontSize = 11.sp,
+                                color = if (isDark) DarkTextSecondary else Color.Gray
+                            )
+                        }
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = { onOpenReviews(currentUserId, currentUserName) },
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, OceanBlue)
+                ) {
+                    Text("View All", color = OceanBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = OceanBlue, modifier = Modifier.size(10.dp))
+                }
+            }
+        }
+
         // Section 1: Personal Information Card
         SectionCard(title = "Personal Information") {
             ProfileField("Full Name", state.fullName, state.isEditing) { viewModel.updateFullName(it) }
@@ -305,15 +632,40 @@ fun ProfileScreen(
 
         // Section 2: Riding Information Card
         SectionCard(title = "Riding Information") {
-            Text("Riding Experience Level", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Riding Experience Level", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = DeepNavy)
+            
+            // Experience level: 3 equal width buttons with consistent height and no wrapping
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 listOf("Beginner", "Intermediate", "Experienced").forEach { level ->
-                    FilterChip(
-                        selected = state.ridingExperience == level,
+                    val isSelected = state.ridingExperience.equals(level, ignoreCase = true)
+                    Surface(
+                        onClick = { if (state.isEditing) viewModel.updateRidingExperience(level) },
                         enabled = state.isEditing,
-                        onClick = { viewModel.updateRidingExperience(level) },
-                        label = { Text(level) }
-                    )
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) (if (isDark) Cyan.copy(alpha = 0.2f) else OceanBlue.copy(alpha = 0.15f)) else (if (isDark) DarkSurfaceVariant else Color(0xFFF5F8FC)),
+                        border = BorderStroke(1.5.dp, if (isSelected) (if (isDark) Cyan else OceanBlue) else (if (isDark) DarkBorder else Color(0xFFD6E2F2))),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = level,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                color = if (isSelected) (if (isDark) Cyan else OceanBlue) else DeepNavy,
+                                maxLines = 1,
+                                softWrap = false,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
 
@@ -321,29 +673,89 @@ fun ProfileScreen(
             ProfileField("Motorcycle Brand & Model", state.motorcycleBrandModel, state.isEditing) { viewModel.updateMotorcycleBrandModel(it) }
             ProfileField("Engine Capacity (CC)", state.motorcycleCc, state.isEditing, keyboardType = KeyboardType.Number) { viewModel.updateMotorcycleCc(it) }
 
-            Text("Preferred Riding Styles", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Preferred Riding Styles with responsive FlowRow wrapping and distinct chip styles
+            Text("Preferred Riding Styles", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = DeepNavy)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 listOf("Scenic", "Adventure", "Touring", "Weekend rides").forEach { style ->
-                    FilterChip(
-                        selected = state.ridingStyles.contains(style),
+                    val isSelected = state.ridingStyles.any { it.equals(style, ignoreCase = true) }
+                    Surface(
+                        onClick = { if (state.isEditing) viewModel.toggleRidingStyle(style) },
                         enabled = state.isEditing,
-                        onClick = { viewModel.toggleRidingStyle(style) },
-                        label = { Text(style) }
-                    )
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) (if (isDark) Cyan.copy(alpha = 0.2f) else OceanBlue.copy(alpha = 0.12f)) else (if (isDark) DarkSurfaceVariant else Color(0xFFF5F8FC)),
+                        border = BorderStroke(1.dp, if (isSelected) (if (isDark) Cyan else OceanBlue) else (if (isDark) DarkBorder else Color(0xFFD6E2F2))),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = if (isDark) Cyan else OceanBlue,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Text(
+                                text = style,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) (if (isDark) Cyan else OceanBlue) else (if (isDark) DarkTextSecondary else DeepNavy)
+                            )
+                        }
+                    }
                 }
             }
 
-            Text("Preferred Destinations", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Preferred Destinations with responsive FlowRow wrapping
+            Text("Preferred Destinations", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = DeepNavy)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 listOf("Ooty", "Coorg", "Munnar", "Goa", "Pondicherry", "Araku Valley", "Yelagiri").forEach { dest ->
-                    FilterChip(
-                        selected = state.preferredDestinations.contains(dest),
+                    val isSelected = state.preferredDestinations.any { it.equals(dest, ignoreCase = true) }
+                    Surface(
+                        onClick = { if (state.isEditing) viewModel.toggleDestination(dest) },
                         enabled = state.isEditing,
-                        onClick = { viewModel.toggleDestination(dest) },
-                        label = { Text(dest) }
-                    )
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) (if (isDark) Cyan.copy(alpha = 0.2f) else OceanBlue.copy(alpha = 0.12f)) else (if (isDark) DarkSurfaceVariant else Color(0xFFF5F8FC)),
+                        border = BorderStroke(1.dp, if (isSelected) (if (isDark) Cyan else OceanBlue) else (if (isDark) DarkBorder else Color(0xFFD6E2F2))),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = if (isDark) Cyan else OceanBlue,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Text(
+                                text = dest,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) (if (isDark) Cyan else OceanBlue) else (if (isDark) DarkTextSecondary else DeepNavy)
+                            )
+                        }
+                    }
                 }
             }
+
+            HorizontalDivider(color = if (isDark) DarkBorder else Color(0xFFEEF3FA))
 
             SwitchRow("Open to Joining New Teams", state.isOpenToNewTeams, state.isEditing) { viewModel.updateOpenToNewTeams(it) }
             SwitchRow("Willing to Mentor Beginners", state.isWillingToMentor, state.isEditing) { viewModel.updateWillingToMentor(it) }
@@ -351,7 +763,11 @@ fun ProfileScreen(
 
         // Section 3: Trip Preferences & Budget Card
         SectionCard(title = "Trip Preferences & Budget") {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Responsive budget row with clear currency labels
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Box(modifier = Modifier.weight(1f)) {
                     ProfileField("Min Budget (₹)", state.minBudget, state.isEditing, keyboardType = KeyboardType.Number) { viewModel.updateMinBudget(it) }
                 }
@@ -370,11 +786,162 @@ fun ProfileScreen(
         // Section 4: Safety & Preferences Card
         SectionCard(title = "Safety & Preferences") {
             CheckboxRow("Helmet & Protective Gear Confirmed", state.helmetGearConfirmed, state.isEditing) { viewModel.updateHelmetGearConfirmed(it) }
-            ProfileField("Emergency Contact Name (Private)", state.emergencyContactName, state.isEditing) { viewModel.updateEmergencyContactName(it) }
-            ProfileField("Emergency Contact Phone (Private)", state.emergencyContactPhone, state.isEditing, keyboardType = KeyboardType.Phone) { viewModel.updateEmergencyContactPhone(it) }
             ProfileField("Preferred Language", state.preferredLanguage, state.isEditing) { viewModel.updatePreferredLanguage(it) }
+            
+            HorizontalDivider(color = if (isDark) DarkBorder else Color(0xFFEEF3FA))
+
             SwitchRow("Share Live Location During Rides", state.shareLiveLocation, state.isEditing) { viewModel.updateShareLiveLocation(it) }
             CheckboxRow("I Agree to Group Riding & Safety Rules", state.agreeSafetyGuidelines, state.isEditing) { viewModel.updateAgreeSafetyGuidelines(it) }
+
+            HorizontalDivider(color = if (isDark) DarkBorder else Color(0xFFEEF3FA))
+
+            // Emergency Contacts Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Emergency Contacts", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = DeepNavy)
+                    Text(
+                        "Notified with GPS location when SOS is triggered",
+                        fontSize = 11.sp,
+                        color = if (isDark) DarkTextSecondary else Color.Gray
+                    )
+                }
+                TextButton(
+                    onClick = { showAddContactDialog = true }
+                ) {
+                    Icon(Icons.Default.PersonAdd, contentDescription = null, tint = OceanBlue, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add", color = OceanBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+
+            if (emergencyState.contacts.isEmpty()) {
+                Surface(
+                    color = if (isDark) DarkSurfaceVariant else Color(0xFFF7F9FC),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "No emergency contacts added yet. Add a family member or friend to ensure they receive alerts during SOS situations.",
+                        fontSize = 12.sp,
+                        color = if (isDark) DarkTextSecondary else Color.Gray,
+                        modifier = Modifier.padding(12.dp),
+                        lineHeight = 16.sp
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    emergencyState.contacts.forEach { contact ->
+                        Surface(
+                            color = if (isDark) DarkSurfaceVariant else Color(0xFFF7FAFE),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, if (isDark) DarkBorder else Color(0xFFE2EDF9)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text(contact.contactName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = DeepNavy)
+                                        if (contact.isPrimary) {
+                                            Surface(
+                                                color = AccentGreen,
+                                                shape = RoundedCornerShape(4.dp)
+                                            ) {
+                                                Text(
+                                                    "PRIMARY ★",
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Surface(
+                                            color = (if (isDark) Cyan else OceanBlue).copy(alpha = 0.15f),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                contact.relationship,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isDark) Cyan else OceanBlue,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(contact.phone, fontSize = 12.sp, color = if (isDark) DarkTextSecondary else Color.Gray)
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = {
+                                            editingContact = contact
+                                            showAddContactDialog = true
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Edit contact",
+                                            tint = OceanBlue,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = { emergencyViewModel.deleteContact(contact.id) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Delete contact",
+                                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(color = if (isDark) DarkBorder else Color(0xFFEEF3FA))
+
+            // SOS Trigger and History Actions
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onOpenEmergencySos,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFDC2626),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Sos, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("TRIGGER EMERGENCY SOS", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                }
+
+                OutlinedButton(
+                    onClick = onOpenEmergencyHistory,
+                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, if (isDark) DarkBorder else Color(0xFFCFD9E8))
+                ) {
+                    Icon(Icons.Default.History, contentDescription = null, tint = DeepNavy, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("View SOS Alert History", color = DeepNavy, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                }
+            }
         }
 
         // Section 5: Backend Server Connection
@@ -388,7 +955,7 @@ fun ProfileScreen(
                     Text(
                         "REST API Target URL",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = if (isDark) DarkTextSecondary else Color.Gray
                     )
                     Text(
                         ApiConstants.BASE_URL,
@@ -414,7 +981,7 @@ fun ProfileScreen(
         // Section 6: Account Session & Logout
         OutlinedButton(
             onClick = { showLogoutConfirm = true },
-            modifier = Modifier.fillMaxWidth().height(46.dp),
+            modifier = Modifier.fillMaxWidth().height(48.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.error
@@ -430,6 +997,9 @@ fun ProfileScreen(
             "Ride safely",
             "Wear protective gear, agree on meeting points, and share your trip plan with someone you trust."
         )
+
+        // Essential bottom clearance so the final content is never covered by the floating bottom navigation bar
+        Spacer(Modifier.height(110.dp))
     }
 
     if (showServerConfig) {
@@ -442,7 +1012,7 @@ fun ProfileScreen(
     if (showLogoutConfirm) {
         AlertDialog(
             onDismissRequest = { showLogoutConfirm = false },
-            containerColor = if (AppSettingsState.isDarkMode) DarkSurface else Color.White,
+            containerColor = if (isDark) DarkSurface else Color.White,
             icon = {
                 Icon(
                     Icons.AutoMirrored.Filled.Logout,
@@ -462,7 +1032,7 @@ fun ProfileScreen(
                 Text(
                     "You will be signed out from your rider account. Your local session and preferences will be cleared.",
                     fontSize = 13.sp,
-                    color = Color.Gray
+                    color = if (isDark) DarkTextSecondary else Color.Gray
                 )
             },
             confirmButton = {
@@ -489,32 +1059,132 @@ fun ProfileScreen(
         )
     }
 
-    // Public Profile Preview Dialog
-    if (state.isPreviewingPublic) {
+    // Add / Edit Emergency Contact Dialog
+    if (showAddContactDialog) {
+        val editing = editingContact
+        var newName by remember(editing) { mutableStateOf(editing?.contactName ?: "") }
+        var newPhone by remember(editing) { mutableStateOf(editing?.phone ?: "") }
+        var selectedRel by remember(editing) { mutableStateOf(editing?.relationship ?: "Family") }
+        var isPrimaryContact by remember(editing) { mutableStateOf(editing?.isPrimary ?: false) }
+        val relations = listOf("Parent", "Family", "Friend", "Spouse", "Partner", "Doctor", "Other")
+
         AlertDialog(
-            onDismissRequest = { viewModel.togglePublicPreview(false) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.togglePublicPreview(false) }) {
-                    Text("Close Preview", color = OceanBlue, fontWeight = FontWeight.Bold)
-                }
+            onDismissRequest = {
+                showAddContactDialog = false
+                editingContact = null
             },
             title = {
-                Text("Public Rider Profile Preview", fontWeight = FontWeight.Bold, color = DeepNavy)
+                Text(
+                    if (editing != null) "Edit Emergency Contact" else "Add Emergency Contact",
+                    fontWeight = FontWeight.Bold,
+                    color = DeepNavy
+                )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("This is how other riders see your profile:", fontSize = 12.sp, color = Color.Gray)
-                    HorizontalDivider()
-                    Text("• Name: ${state.fullName}", fontWeight = FontWeight.Bold)
-                    Text("• Bike: ${state.motorcycleBrandModel} (${state.motorcycleCc} CC)")
-                    Text("• Location: ${state.cityState}")
-                    Text("• Experience: ${state.ridingExperience} (${state.yearsExperience} yrs)")
-                    Text("• Preferred Styles: ${state.ridingStyles.joinToString(", ")}")
-                    Text("• Destinations: ${state.preferredDestinations.joinToString(", ")}")
-                    Text("• Budget Range: ₹${state.minBudget} - ₹${state.maxBudget}")
-                    Text("• Bio: ${state.bio}")
-                    Text("• Mentor Status: ${if (state.isWillingToMentor) "Available to mentor beginners ✓" else "Not mentoring"}")
-                    Text("(Private emergency contact details are excluded from public view)", fontSize = 11.sp, color = Color.Gray)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text("Contact Name (e.g. Mom, Ramesh)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = newPhone,
+                        onValueChange = { newPhone = it },
+                        label = { Text("Phone Number (+91 ...)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    Text("Relationship", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DeepNavy)
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        relations.forEach { rel ->
+                            val isSelected = selectedRel == rel
+                            Surface(
+                                onClick = { selectedRel = rel },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) OceanBlue else (if (isDark) DarkSurfaceVariant else Color(0xFFF0F4FA)),
+                                border = BorderStroke(1.dp, if (isSelected) OceanBlue else Color.Transparent)
+                            ) {
+                                Text(
+                                    rel,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) Color.White else DeepNavy,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Primary Contact Toggle Checkbox
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { isPrimaryContact = !isPrimaryContact }.padding(vertical = 4.dp)
+                    ) {
+                        Checkbox(
+                            checked = isPrimaryContact,
+                            onCheckedChange = { isPrimaryContact = it },
+                            colors = CheckboxDefaults.colors(checkedColor = AccentGreen)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Mark as Primary Emergency Contact",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = DeepNavy
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newName.isNotBlank() && newPhone.isNotBlank()) {
+                            if (editing != null) {
+                                emergencyViewModel.updateContact(
+                                    id = editing.id,
+                                    name = newName.trim(),
+                                    phone = newPhone.trim(),
+                                    relationship = selectedRel,
+                                    isPrimary = isPrimaryContact
+                                ) {
+                                    showAddContactDialog = false
+                                    editingContact = null
+                                }
+                            } else {
+                                emergencyViewModel.addContact(
+                                    name = newName.trim(),
+                                    phone = newPhone.trim(),
+                                    relationship = selectedRel,
+                                    isPrimary = isPrimaryContact
+                                ) {
+                                    showAddContactDialog = false
+                                }
+                            }
+                            showAddContactDialog = false
+                            editingContact = null
+                        }
+                    },
+                    enabled = newName.isNotBlank() && newPhone.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Save Contact", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showAddContactDialog = false
+                    editingContact = null
+                }) {
+                    Text("Cancel")
                 }
             }
         )
@@ -529,13 +1199,13 @@ private fun SectionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = if (AppSettingsState.isDarkMode) DarkSurface else Color.White),
-        border = if (AppSettingsState.isDarkMode) androidx.compose.foundation.BorderStroke(1.dp, DarkBorder) else null,
+        border = if (AppSettingsState.isDarkMode) BorderStroke(1.dp, DarkBorder) else null,
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
                 title,
@@ -543,7 +1213,7 @@ private fun SectionCard(
                 fontWeight = FontWeight.Bold,
                 color = DeepNavy
             )
-            HorizontalDivider()
+            HorizontalDivider(color = if (AppSettingsState.isDarkMode) DarkBorder else Color(0xFFEEF3FA))
             content()
         }
     }
@@ -565,16 +1235,19 @@ private fun ProfileField(
             label = { Text(label) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = singleLine,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            shape = RoundedCornerShape(12.dp)
         )
     } else {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(label, fontSize = 12.sp, color = Color.Gray)
+            Text(label, fontSize = 12.sp, color = if (AppSettingsState.isDarkMode) DarkTextSecondary else Color.Gray)
+            Spacer(Modifier.height(2.dp))
             Text(
                 value.ifBlank { "Not set" },
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = DeepNavy
+                fontWeight = FontWeight.SemiBold,
+                color = DeepNavy,
+                lineHeight = 20.sp
             )
         }
     }
@@ -592,12 +1265,21 @@ private fun SwitchRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, fontSize = 14.sp, color = DeepNavy, modifier = Modifier.weight(1f))
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = DeepNavy,
+            modifier = Modifier.weight(1f).padding(end = 8.dp)
+        )
         Switch(
             checked = checked,
             enabled = enabled,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Cyan)
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Cyan
+            )
         )
     }
 }
@@ -612,16 +1294,28 @@ private fun CheckboxRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!checked) },
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = checked,
             enabled = enabled,
             onCheckedChange = onCheckedChange,
-            colors = CheckboxDefaults.colors(checkedColor = DeepNavy)
+            colors = CheckboxDefaults.colors(
+                checkedColor = if (AppSettingsState.isDarkMode) Cyan else DeepNavy,
+                checkmarkColor = if (AppSettingsState.isDarkMode) DeepNavy else Color.White
+            )
         )
-        Spacer(Modifier.width(6.dp))
-        Text(label, fontSize = 13.sp, color = DeepNavy)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = DeepNavy,
+            lineHeight = 18.sp,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

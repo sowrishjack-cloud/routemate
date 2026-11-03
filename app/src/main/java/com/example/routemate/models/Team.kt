@@ -14,5 +14,6 @@ data class Team(
     val startingPoint: String = "Bengaluru",
     val distance: String = "280 km",
     val duration: String = "5 hours",
-    val meetingPoint: String = "Silk Board Flyover, Bengaluru"
+    val meetingPoint: String = "Silk Board Flyover, Bengaluru",
+    val leaderIsVerified: Boolean = false
 )

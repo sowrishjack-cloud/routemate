@@ -31,17 +31,17 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.routemate.components.ServerConfigDialog
-import com.example.routemate.data.remote.ApiConstants
 import com.example.routemate.data.remote.SessionManager
 import com.example.routemate.data.repository.AuthRepository
 import com.example.routemate.models.AppSettingsState
 import com.example.routemate.ui.theme.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    onContinueAsGuest: () -> Unit
+    onCreateAccountClick: () -> Unit
 ) {
     val context = LocalContext.current
     val isDark = AppSettingsState.isDarkMode
@@ -226,13 +226,7 @@ fun LoginScreen(
                             keyboardType = KeyboardType.Email,
                             imeAction = ImeAction.Next
                         ),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = if (isDark) Cyan else OceanBlue,
-                            unfocusedBorderColor = if (isDark) DarkBorder else Color(0xFFD6E2F2),
-                            focusedTextColor = primaryTextColor,
-                            unfocusedTextColor = primaryTextColor
-                        )
+                        shape = RoundedCornerShape(14.dp)
                     )
 
                     // Password Field
@@ -250,7 +244,7 @@ fun LoginScreen(
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                    contentDescription = null,
                                     tint = secondaryTextColor
                                 )
                             }
@@ -274,13 +268,7 @@ fun LoginScreen(
                                 }
                             }
                         ),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = if (isDark) Cyan else OceanBlue,
-                            unfocusedBorderColor = if (isDark) DarkBorder else Color(0xFFD6E2F2),
-                            focusedTextColor = primaryTextColor,
-                            unfocusedTextColor = primaryTextColor
-                        )
+                        shape = RoundedCornerShape(14.dp)
                     )
 
                     // Sign In Button
@@ -320,117 +308,25 @@ fun LoginScreen(
                 }
             }
 
-            // Quick Demo Accounts Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD)
-                ),
-                border = if (isDark) BorderStroke(1.dp, DarkBorder) else null
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "One-Tap Demo Rider Logins",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = primaryTextColor
-                        )
-                        Surface(
-                            color = AccentGreen.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                "Quick Access",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentGreen,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    Text(
-                        "Tap any rider profile below to sign in instantly:",
-                        fontSize = 11.sp,
-                        color = secondaryTextColor
-                    )
-
-                    listOf(
-                        DemoRiderAccount(1, "Arjun Kumar", "arjun@routemate.dev", "Chennai • Himalayan 450"),
-                        DemoRiderAccount(2, "Meera Rao", "meera@routemate.dev", "Vellore • KTM 390"),
-                        DemoRiderAccount(3, "Karthik Raja", "karthik@routemate.dev", "Coimbatore • BMW G310"),
-                        DemoRiderAccount(4, "Priya Sharma", "priya@routemate.dev", "Kanchipuram • Ronin 225")
-                    ).forEach { account ->
-                        Surface(
-                            onClick = {
-                                email = account.email
-                                password = "password123"
-                                performLogin(
-                                    account.email, "password123", authRepository, scope,
-                                    onLoading = { isLoading = it },
-                                    onError = { errorMessage = it },
-                                    onSuccess = onLoginSuccess
-                                )
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isDark) DarkSurface else Color.White,
-                            border = BorderStroke(1.dp, if (isDark) DarkBorder else Color(0xFFDCE6F5)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isDark) Cyan.copy(alpha = 0.2f) else OceanBlue.copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(account.name.first().toString(), fontWeight = FontWeight.Bold, color = if (isDark) Cyan else OceanBlue)
-                                    }
-                                    Column {
-                                        Text(account.name, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = primaryTextColor)
-                                        Text(account.specs, fontSize = 10.sp, color = secondaryTextColor)
-                                    }
-                                }
-                                Icon(
-                                    Icons.Default.ChevronRight,
-                                    contentDescription = null,
-                                    tint = if (isDark) Cyan else OceanBlue,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Continue as Guest Button
-            TextButton(
-                onClick = onContinueAsGuest,
-                modifier = Modifier.padding(top = 4.dp)
+            // Create Account Navigation below Sign In button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Continue as Guest Rider →",
+                    "Don't have an account? ",
+                    fontSize = 13.sp,
+                    color = secondaryTextColor
+                )
+                Text(
+                    "Create a new account",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
                     color = if (isDark) Cyan else OceanBlue,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp
+                    modifier = Modifier.clickable { onCreateAccountClick() }
                 )
             }
 
@@ -446,18 +342,11 @@ fun LoginScreen(
     }
 }
 
-private data class DemoRiderAccount(
-    val id: Int,
-    val name: String,
-    val email: String,
-    val specs: String
-)
-
 private fun performLogin(
     email: String,
     pass: String,
     repository: AuthRepository,
-    scope: kotlinx.coroutines.CoroutineScope,
+    scope: CoroutineScope,
     onLoading: (Boolean) -> Unit,
     onError: (String?) -> Unit,
     onSuccess: () -> Unit
@@ -478,4 +367,3 @@ private fun performLogin(
         )
     }
 }
-

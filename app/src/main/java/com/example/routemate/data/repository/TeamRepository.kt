@@ -1,6 +1,5 @@
 package com.example.routemate.data.repository
 
-import com.example.routemate.data.local.LocalMockData
 import com.example.routemate.data.remote.JoinResponseDto
 import com.example.routemate.data.remote.NetworkStateHolder
 import com.example.routemate.data.remote.RetrofitClient
@@ -28,17 +27,21 @@ class TeamRepository {
                         startingPoint = dto.startingPoint,
                         distance = dto.distance,
                         duration = dto.duration,
-                        meetingPoint = dto.meetingPoint
+                        meetingPoint = dto.meetingPoint,
+                        leaderIsVerified = dto.leaderIsVerified
                     )
                 }
                 NetworkStateHolder.markOnline()
                 Result.success(teams)
             } else {
-                throw Exception(response.message ?: "Failed to load teams")
+                val errorMsg = response.message ?: "Failed to load teams"
+                NetworkStateHolder.markOffline(errorMsg)
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
-            NetworkStateHolder.markOffline(e.localizedMessage ?: "Server unreachable")
-            Result.success(LocalMockData.sampleTeams)
+            val errorMsg = e.localizedMessage ?: "Failed to connect to backend server"
+            NetworkStateHolder.markOffline(errorMsg)
+            Result.failure(Exception(errorMsg, e))
         }
     }
 
@@ -52,15 +55,7 @@ class TeamRepository {
                 Result.failure(Exception(response.message ?: "Failed to join team"))
             }
         } catch (e: Exception) {
-            // Local simulated join success when offline
-            Result.success(
-                JoinResponseDto(
-                    teamId = teamId.toIntOrNull() ?: 1,
-                    currentMembers = 5,
-                    targetMembers = 6,
-                    status = "joined"
-                )
-            )
+            Result.failure(Exception(e.localizedMessage ?: "Server unreachable: Could not join team", e))
         }
     }
 }

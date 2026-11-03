@@ -19,6 +19,7 @@ class RiderController {
             SELECT t.id, 
                    u.full_name AS name,
                    u.avatar_url,
+                   u.is_verified,
                    t.destination, 
                    t.dates, 
                    t.level_required AS level, 
@@ -75,6 +76,7 @@ class RiderController {
                 'meetingPoint' => $r['meetingPoint'],
                 'riderCount' => $r['riderCount'],
                 'avatarUrl' => $r['avatar_url'] ?? 'ic_avatar_1',
+                'isVerified' => (bool)($r['is_verified'] ?? false),
                 'status' => $r['status']
             ];
         }, $riders);
@@ -89,6 +91,7 @@ class RiderController {
             SELECT t.id, 
                    u.full_name AS name,
                    u.avatar_url,
+                   u.is_verified,
                    t.destination, 
                    t.dates, 
                    t.level_required AS level, 
@@ -126,6 +129,7 @@ class RiderController {
             'meetingPoint' => $r['meetingPoint'],
             'riderCount' => $r['riderCount'],
             'avatarUrl' => $r['avatar_url'] ?? 'ic_avatar_1',
+            'isVerified' => (bool)($r['is_verified'] ?? false),
             'status' => $r['status']
         ];
 

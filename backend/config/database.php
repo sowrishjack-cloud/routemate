@@ -39,5 +39,9 @@ class Database {
 
         return self::$instance;
     }
-}
 
+    // Instance method compatibility
+    public function connect(): PDO {
+        return self::getConnection();
+    }
+}

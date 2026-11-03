@@ -7,6 +7,7 @@ val OceanBlue = Color(0xFF1764C0)
 val Cyan = Color(0xFF42D9F5)
 val IceBlue = Color(0xFFEDF5FF)
 val AccentGreen = Color(0xFF168568)
+val AccentOrange = Color(0xFFE65100)
 
 // Dark Theme Colors
 val DarkBackground = Color(0xFF0B1120) // Deep midnight obsidian

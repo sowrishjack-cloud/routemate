@@ -11,5 +11,6 @@ data class Rider(
     val startingPoint: String = "Chennai",
     val distance: String = "340 km",
     val duration: String = "6 hours",
-    val meetingPoint: String = "Koyambedu Bus Stand, Chennai"
+    val meetingPoint: String = "Koyambedu Bus Stand, Chennai",
+    val isVerified: Boolean = false
 )

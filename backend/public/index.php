@@ -7,7 +7,7 @@ declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
-// 2. Simple PSR-4 Autoloader
+// 2. PSR-4 Autoloader
 spl_autoload_register(function ($class) {
     $prefix = 'RouteMate\\';
     $baseDir = dirname(__DIR__) . '/';
@@ -79,14 +79,48 @@ if (($apiPos = strpos($path, 'api/')) !== false) {
 }
 
 // 7. Route Dispatching
+
+// --- HEALTH & DATABASE STATUS ---
 if ($path === '' || $path === 'api' || $path === 'api/health') {
+    $dbStatus = 'disconnected';
+    try {
+        $db = \RouteMate\Config\Database::getConnection();
+        $db->query('SELECT 1');
+        $dbStatus = 'connected';
+    } catch (\Throwable $e) {
+        $dbStatus = 'error: ' . $e->getMessage();
+    }
+
     \RouteMate\Helpers\Response::success([
         'service' => 'RouteMate REST API',
         'version' => '1.0.0',
         'status' => 'online',
-        'database' => 'connected',
+        'database' => $dbStatus,
         'timestamp' => date('c')
     ], 'RouteMate API Server is running');
+}
+
+if ($path === 'api/health/db' || $path === 'api/db-check') {
+    try {
+        $db = \RouteMate\Config\Database::getConnection();
+        $tables = ['users', 'rider_profiles', 'trips', 'teams', 'team_members', 'team_join_requests', 'trip_requests', 'notifications', 'learning_resources', 'learning_progress'];
+        $counts = [];
+        foreach ($tables as $t) {
+            try {
+                $stmt = $db->query("SELECT count(*) as c FROM `{$t}`");
+                $counts[$t] = (int)$stmt->fetchColumn();
+            } catch (\Throwable $e) {
+                $counts[$t] = 'table missing';
+            }
+        }
+        \RouteMate\Helpers\Response::success([
+            'database' => 'routemate_db',
+            'status' => 'connected',
+            'tables' => $counts
+        ], 'Database connection verified');
+    } catch (\Throwable $e) {
+        \RouteMate\Helpers\Response::error('Database check failed: ' . $e->getMessage(), 500);
+    }
 }
 
 // --- AUTH ROUTES ---
@@ -111,16 +145,16 @@ if ($requestMethod === 'GET' && $path === 'api/profile') {
     (new \RouteMate\Controllers\ProfileController())->getProfile();
 }
 
-if ($requestMethod === 'PUT' && $path === 'api/profile') {
-    (new \RouteMate\Controllers\ProfileController())->updateProfile();
+if (($requestMethod === 'POST' || $requestMethod === 'PUT') && $path === 'api/profile') {
+    (new \RouteMate\Controllers\ProfileController())->saveProfile();
 }
 
-// --- HOME FEED ROUTE ---
+// --- HOME FEED ROUTE (For Android) ---
 if ($requestMethod === 'GET' && $path === 'api/home') {
     (new \RouteMate\Controllers\HomeController())->getFeed();
 }
 
-// --- RIDERS / MATCH ROUTES ---
+// --- RIDERS / MATCH ROUTES (For Android) ---
 if ($requestMethod === 'GET' && $path === 'api/riders') {
     (new \RouteMate\Controllers\RiderController())->index();
 }
@@ -130,12 +164,24 @@ if ($requestMethod === 'GET' && preg_match('#^api/riders/(\d+)$#', $path, $match
 }
 
 // --- TRIPS ROUTES ---
+if ($requestMethod === 'POST' && $path === 'api/trips') {
+    (new \RouteMate\Controllers\TripController())->create();
+}
+
 if ($requestMethod === 'GET' && $path === 'api/trips') {
     (new \RouteMate\Controllers\TripController())->index();
 }
 
 if ($requestMethod === 'GET' && preg_match('#^api/trips/(\d+)$#', $path, $matches)) {
     (new \RouteMate\Controllers\TripController())->show((int)$matches[1]);
+}
+
+if ($requestMethod === 'PUT' && preg_match('#^api/trips/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\TripController())->update((int)$matches[1]);
+}
+
+if ($requestMethod === 'DELETE' && preg_match('#^api/trips/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\TripController())->delete((int)$matches[1]);
 }
 
 if ($requestMethod === 'POST' && preg_match('#^api/trips/(\d+)/join$#', $path, $matches)) {
@@ -147,6 +193,10 @@ if ($requestMethod === 'GET' && preg_match('#^api/trips/(\d+)/status$#', $path, 
 }
 
 // --- TEAMS ROUTES ---
+if ($requestMethod === 'POST' && $path === 'api/teams') {
+    (new \RouteMate\Controllers\TeamController())->create();
+}
+
 if ($requestMethod === 'GET' && $path === 'api/teams') {
     (new \RouteMate\Controllers\TeamController())->index();
 }
@@ -155,13 +205,25 @@ if ($requestMethod === 'GET' && preg_match('#^api/teams/(\d+)$#', $path, $matche
     (new \RouteMate\Controllers\TeamController())->show((int)$matches[1]);
 }
 
+if ($requestMethod === 'PUT' && preg_match('#^api/teams/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\TeamController())->update((int)$matches[1]);
+}
+
+if ($requestMethod === 'GET' && preg_match('#^api/teams/(\d+)/members$#', $path, $matches)) {
+    (new \RouteMate\Controllers\TeamController())->members((int)$matches[1]);
+}
+
 if ($requestMethod === 'POST' && preg_match('#^api/teams/(\d+)/join$#', $path, $matches)) {
     (new \RouteMate\Controllers\TeamController())->join((int)$matches[1]);
 }
 
-// --- LEARNING HUB ROUTE ---
-if ($requestMethod === 'GET' && $path === 'api/learning') {
-    (new \RouteMate\Controllers\LearningController())->index();
+// --- JOIN REQUESTS ROUTES (Approval / Rejection) ---
+if ($requestMethod === 'POST' && preg_match('#^api/join-requests/(\d+)/approve$#', $path, $matches)) {
+    (new \RouteMate\Controllers\JoinRequestController())->approve((int)$matches[1]);
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/join-requests/(\d+)/reject$#', $path, $matches)) {
+    (new \RouteMate\Controllers\JoinRequestController())->reject((int)$matches[1]);
 }
 
 // --- NOTIFICATIONS ROUTES ---
@@ -169,10 +231,158 @@ if ($requestMethod === 'GET' && $path === 'api/notifications') {
     (new \RouteMate\Controllers\NotificationController())->index();
 }
 
-if ($requestMethod === 'PUT' && preg_match('#^api/notifications/(\d+)/read$#', $path, $matches)) {
+if (($requestMethod === 'POST' || $requestMethod === 'PUT') && preg_match('#^api/notifications/(\d+)/read$#', $path, $matches)) {
     (new \RouteMate\Controllers\NotificationController())->markAsRead((int)$matches[1]);
+}
+
+// --- LEARNING HUB ROUTES ---
+if ($requestMethod === 'GET' && $path === 'api/learning') {
+    (new \RouteMate\Controllers\LearningController())->index();
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/learning/(\d+)/progress$#', $path, $matches)) {
+    (new \RouteMate\Controllers\LearningController())->saveProgress((int)$matches[1]);
+}
+
+// --- TEAM CHAT ROUTES ---
+if ($requestMethod === 'GET' && preg_match('#^api/teams/(\d+)/messages$#', $path, $matches)) {
+    (new \RouteMate\Controllers\ChatController())->getMessages((int)$matches[1]);
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/teams/(\d+)/messages$#', $path, $matches)) {
+    (new \RouteMate\Controllers\ChatController())->sendMessage((int)$matches[1]);
+}
+
+// --- TEAM BUDGET & EXPENSES ROUTES ---
+if ($requestMethod === 'GET' && preg_match('#^api/teams/(\d+)/expenses$#', $path, $matches)) {
+    (new \RouteMate\Controllers\BudgetController())->getExpenses((int)$matches[1]);
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/teams/(\d+)/expenses$#', $path, $matches)) {
+    (new \RouteMate\Controllers\BudgetController())->createExpense((int)$matches[1]);
+}
+
+if ($requestMethod === 'DELETE' && preg_match('#^api/expenses/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\BudgetController())->deleteExpense((int)$matches[1]);
+}
+
+if ($requestMethod === 'GET' && preg_match('#^api/teams/(\d+)/budget-summary$#', $path, $matches)) {
+    (new \RouteMate\Controllers\BudgetController())->getSummary((int)$matches[1]);
+}
+
+// --- RIDER VERIFICATION ROUTES ---
+if ($requestMethod === 'POST' && $path === 'api/verification/submit') {
+    (new \RouteMate\Controllers\VerificationController())->submit();
+}
+
+if ($requestMethod === 'GET' && $path === 'api/verification/status') {
+    (new \RouteMate\Controllers\VerificationController())->getStatus();
+}
+
+if ($requestMethod === 'GET' && $path === 'api/admin/verifications') {
+    (new \RouteMate\Controllers\VerificationController())->adminList();
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/admin/verifications/(\d+)/approve$#', $path, $matches)) {
+    (new \RouteMate\Controllers\VerificationController())->adminApprove((int)$matches[1]);
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/admin/verifications/(\d+)/reject$#', $path, $matches)) {
+    (new \RouteMate\Controllers\VerificationController())->adminReject((int)$matches[1]);
+}
+
+// --- RATINGS & REVIEWS ROUTES ---
+if ($requestMethod === 'POST' && $path === 'api/reviews') {
+    (new \RouteMate\Controllers\ReviewController())->create();
+}
+
+if ($requestMethod === 'GET' && preg_match('#^api/users/(\d+)/reviews$#', $path, $matches)) {
+    (new \RouteMate\Controllers\ReviewController())->getRiderReviews((int)$matches[1]);
+}
+
+if ($requestMethod === 'GET' && preg_match('#^api/users/(\d+)/rating-summary$#', $path, $matches)) {
+    (new \RouteMate\Controllers\ReviewController())->getRatingSummary((int)$matches[1]);
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/reviews/(\d+)/report$#', $path, $matches)) {
+    (new \RouteMate\Controllers\ReviewController())->report((int)$matches[1]);
+}
+
+// --- EMERGENCY CONTACTS ROUTES ---
+if ($requestMethod === 'GET' && $path === 'api/emergency/contacts') {
+    (new \RouteMate\Controllers\EmergencyController())->getContacts();
+}
+
+if ($requestMethod === 'POST' && $path === 'api/emergency/contacts') {
+    (new \RouteMate\Controllers\EmergencyController())->addContact();
+}
+
+if (($requestMethod === 'PUT' || $requestMethod === 'POST') && preg_match('#^api/emergency/contacts/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\EmergencyController())->updateContact((int)$matches[1]);
+}
+
+if ($requestMethod === 'DELETE' && preg_match('#^api/emergency/contacts/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\EmergencyController())->deleteContact((int)$matches[1]);
+}
+
+// --- EMERGENCY SOS ALERTS ROUTES ---
+if ($requestMethod === 'POST' && $path === 'api/emergency/alerts') {
+    (new \RouteMate\Controllers\EmergencyController())->createAlert();
+}
+
+if ($requestMethod === 'GET' && $path === 'api/emergency/history') {
+    (new \RouteMate\Controllers\EmergencyController())->getHistory();
+}
+
+if ($requestMethod === 'GET' && preg_match('#^api/emergency/alerts/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\EmergencyController())->getAlertDetails((int)$matches[1]);
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/emergency/alerts/(\d+)/cancel$#', $path, $matches)) {
+    (new \RouteMate\Controllers\EmergencyController())->cancelAlert((int)$matches[1]);
+}
+
+// --- RIDER CONNECTION REQUESTS & ACCEPTANCE ROUTES ---
+if ($requestMethod === 'POST' && ($path === 'api/rider-requests' || $path === 'api/ride-requests')) {
+    (new \RouteMate\Controllers\RideRequestController())->create();
+}
+
+if ($requestMethod === 'GET' && ($path === 'api/rider-requests/received' || $path === 'api/ride-requests/received')) {
+    (new \RouteMate\Controllers\RideRequestController())->getReceived();
+}
+
+if ($requestMethod === 'GET' && ($path === 'api/rider-requests/sent' || $path === 'api/ride-requests/sent')) {
+    (new \RouteMate\Controllers\RideRequestController())->getSent();
+}
+
+if ($requestMethod === 'GET' && ($path === 'api/rider-requests/pending-count' || $path === 'api/ride-requests/pending-count')) {
+    (new \RouteMate\Controllers\RideRequestController())->getPendingCount();
+}
+
+if ($requestMethod === 'GET' && ($path === 'api/rider-requests/connections' || $path === 'api/ride-connections')) {
+    (new \RouteMate\Controllers\RideRequestController())->getConnections();
+}
+
+if (($requestMethod === 'DELETE' && (preg_match('#^api/rider-requests/connections/(\d+)$#', $path, $matches) || preg_match('#^api/ride-connections/(\d+)$#', $path, $matches))) ||
+    ($requestMethod === 'POST' && (preg_match('#^api/rider-requests/connections/(\d+)/disconnect$#', $path, $matches) || preg_match('#^api/ride-connections/(\d+)/disconnect$#', $path, $matches)))) {
+    (new \RouteMate\Controllers\RideRequestController())->disconnect((int)$matches[1]);
+}
+
+if ($requestMethod === 'GET' && (preg_match('#^api/rider-requests/(\d+)$#', $path, $matches) || preg_match('#^api/ride-requests/(\d+)$#', $path, $matches))) {
+    (new \RouteMate\Controllers\RideRequestController())->getDetails((int)$matches[1]);
+}
+
+if (($requestMethod === 'PUT' || $requestMethod === 'POST') && (preg_match('#^api/rider-requests/(\d+)/accept$#', $path, $matches) || preg_match('#^api/ride-requests/(\d+)/accept$#', $path, $matches))) {
+    (new \RouteMate\Controllers\RideRequestController())->accept((int)$matches[1]);
+}
+
+if (($requestMethod === 'PUT' || $requestMethod === 'POST') && (preg_match('#^api/rider-requests/(\d+)/reject$#', $path, $matches) || preg_match('#^api/ride-requests/(\d+)/reject$#', $path, $matches))) {
+    (new \RouteMate\Controllers\RideRequestController())->reject((int)$matches[1]);
+}
+
+if (($requestMethod === 'PUT' || $requestMethod === 'POST') && (preg_match('#^api/rider-requests/(\d+)/cancel$#', $path, $matches) || preg_match('#^api/ride-requests/(\d+)/cancel$#', $path, $matches))) {
+    (new \RouteMate\Controllers\RideRequestController())->cancel((int)$matches[1]);
 }
 
 // 8. 404 Not Found
 \RouteMate\Helpers\Response::error("Endpoint '{$requestMethod} /{$path}' not found", 404);
-

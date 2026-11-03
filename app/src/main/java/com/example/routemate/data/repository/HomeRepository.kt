@@ -65,19 +65,22 @@ class HomeRepository {
                 throw Exception(response.message ?: "Failed to load home feed")
             }
         } catch (e: Exception) {
-            NetworkStateHolder.markOffline(e.localizedMessage ?: "Server unreachable")
-            Result.success(LocalMockData.sampleHomeFeed)
+            val errorMsg = e.localizedMessage ?: "Failed to connect to backend server"
+            NetworkStateHolder.markOffline(errorMsg)
+            Result.failure(Exception(errorMsg, e))
         }
     }
 
     private fun mapDestinationImage(name: String): Int {
         return when (name.lowercase()) {
-            "ooty" -> R.drawable.img_ooty
-            "coorg" -> R.drawable.img_coorg
-            "munnar" -> R.drawable.img_munnar
-            "goa" -> R.drawable.img_goa
-            "araku valley", "araku" -> R.drawable.img_araku
-            else -> R.drawable.img_hero_banner
+            "ooty" -> R.drawable.dest_ooty
+            "coorg" -> R.drawable.dest_coorg
+            "munnar" -> R.drawable.dest_munnar
+            "goa" -> R.drawable.dest_goa
+            "araku valley", "araku" -> R.drawable.dest_araku
+            "pondicherry", "pondy" -> R.drawable.dest_pondicherry
+            "yelagiri" -> R.drawable.dest_yelagiri
+            else -> R.drawable.dest_ooty
         }
     }
 

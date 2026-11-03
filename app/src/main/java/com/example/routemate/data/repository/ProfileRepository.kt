@@ -4,7 +4,7 @@ import com.example.routemate.data.remote.ProfileDto
 import com.example.routemate.data.remote.RetrofitClient
 
 class ProfileRepository {
-    private val apiService = RetrofitClient.getApiService()
+    private val apiService get() = RetrofitClient.getApiService()
 
     suspend fun getProfile(): Result<ProfileDto> {
         return try {

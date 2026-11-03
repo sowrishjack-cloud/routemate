@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,110 +33,245 @@ import com.example.routemate.models.AppSettingsState
 import com.example.routemate.models.Rider
 import com.example.routemate.ui.theme.*
 import com.example.routemate.viewmodel.MatchViewModel
+import com.example.routemate.viewmodel.RideRequestViewModel
+import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 @Composable
 fun MatchScreen(
     onSelectRider: (Rider) -> Unit,
-    viewModel: MatchViewModel = viewModel()
+    onOpenIncomingRequests: () -> Unit = {},
+    onOpenSentRequests: () -> Unit = {},
+    onOpenConnections: () -> Unit = {},
+    viewModel: MatchViewModel = viewModel(),
+    rideRequestViewModel: RideRequestViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val requestUiState by rideRequestViewModel.uiState.collectAsState()
     val isDark = AppSettingsState.isDarkMode
-    val isOfflineMode by NetworkStateHolder.isOfflineMode.collectAsState()
-    var showServerConfigDialog by remember { mutableStateOf(false) }
+
+    var riderToConnect by remember { mutableStateOf<Rider?>(null) }
+    var startLocation by remember { mutableStateOf("Chennai") }
+    var travelDate by remember { mutableStateOf("") }
+    var proposedBudget by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        rideRequestViewModel.loadPendingCount()
+        while (true) {
+            kotlinx.coroutines.delay(10000)
+            rideRequestViewModel.loadPendingCount()
+        }
+    }
+
+    LaunchedEffect(requestUiState.successMessage) {
+        requestUiState.successMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            rideRequestViewModel.clearMessages()
+        }
+    }
+
+    LaunchedEffect(requestUiState.errorMessage) {
+        requestUiState.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            rideRequestViewModel.clearMessages()
+        }
+    }
 
     val destinations = listOf("All", "Ooty", "Coorg", "Munnar", "Goa", "Pondicherry", "Yelagiri", "Kodaikanal", "Leh Ladakh", "Spiti Valley", "Chennai")
     val experienceLevels = listOf("Any", "Beginner", "Intermediate", "Experienced")
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(if (isDark) DarkBackground else IceBlue)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Header Banner
-        Box(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .shadow(8.dp, RoundedCornerShape(24.dp))
-                .clip(RoundedCornerShape(24.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFF071A3C), Color(0xFF124D91), Color(0xFF20A6C9))
-                    )
-                )
-                .padding(20.dp)
+                .fillMaxSize()
+                .background(if (isDark) DarkBackground else IceBlue)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Header Banner
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(8.dp, RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF071A3C), Color(0xFF124D91), Color(0xFF20A6C9))
+                        )
+                    )
+                    .padding(20.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "FIND YOUR RIDING PARTNER",
-                        color = Color(0xFF42D9F5),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Match with riders\nheading your way",
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        lineHeight = 26.sp
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Surface(
-                            color = if (isOfflineMode) Color(0xFFFA8C16).copy(alpha = 0.25f) else Color(0xFF42D9F5).copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(12.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "FIND YOUR RIDING PARTNER",
+                            color = Color(0xFF42D9F5),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Match with riders\nheading your way",
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            lineHeight = 26.sp
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(
-                                if (isOfflineMode) "${uiState.riders.size} riders (Offline Demo)" else "${uiState.riders.size} riders (Live MySQL)",
-                                color = if (isOfflineMode) Color(0xFFFFD591) else Color(0xFF42D9F5),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
+                            Surface(
+                                color = Color(0xFF42D9F5).copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    "${uiState.riders.size} riders available",
+                                    color = Color(0xFF42D9F5),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
                         }
+                    }
 
-                        IconButton(
-                            onClick = { showServerConfigDialog = true },
-                            modifier = Modifier.size(24.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF42D9F5).copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.TwoWheeler,
+                            contentDescription = null,
+                            tint = Color(0xFF42D9F5),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+
+            // Quick Access Tabs: Incoming Requests (with badge), Sent Requests, My Partners
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) DarkSurface else Color.White
+                ),
+                elevation = CardDefaults.cardElevation(2.dp),
+                border = if (isDark) BorderStroke(1.dp, DarkBorder) else null
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Incoming Requests Button with badge (Requirement 1)
+                    Surface(
+                        onClick = onOpenIncomingRequests,
+                        modifier = Modifier.weight(1.4f),
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isDark) DarkSurfaceVariant else Color(0xFFEBF3FD)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                Icons.Default.Settings,
-                                contentDescription = "Server Settings",
-                                tint = Color(0xFF42D9F5),
+                                Icons.Default.Inbox,
+                                contentDescription = "Incoming Requests",
+                                tint = if (isDark) Cyan else OceanBlue,
                                 modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                if (requestUiState.pendingCount > 0) "Incoming Requests (${requestUiState.pendingCount})" else "Incoming Requests",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) Cyan else OceanBlue
+                            )
+                            if (requestUiState.pendingCount > 0) {
+                                Spacer(Modifier.width(4.dp))
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFFE53935)
+                                ) {
+                                    Box(modifier = Modifier.size(8.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    // Sent Requests Button
+                    Surface(
+                        onClick = onOpenSentRequests,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isDark) DarkSurfaceVariant else Color(0xFFEBF3FD)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Outbox,
+                                contentDescription = null,
+                                tint = if (isDark) DarkTextSecondary else DeepNavy,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Sent",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isDark) DarkTextSecondary else DeepNavy
+                            )
+                        }
+                    }
+
+                    // Connected Partners Button
+                    Surface(
+                        onClick = onOpenConnections,
+                        modifier = Modifier.weight(1.1f),
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isDark) DarkSurfaceVariant else Color(0xFFEBF3FD)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Handshake,
+                                contentDescription = null,
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Partners",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF2E7D32)
                             )
                         }
                     }
                 }
-
-                Box(
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF42D9F5).copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.TwoWheeler,
-                        contentDescription = null,
-                        tint = Color(0xFF42D9F5),
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
             }
-        }
 
         // Search & Filter Card
         Card(
@@ -263,32 +399,29 @@ fun MatchScreen(
                 ) {
                     experienceLevels.forEach { exp ->
                         val isSelected = uiState.experience == exp
-                        FilterChip(
-                            selected = isSelected,
+                        Surface(
                             onClick = { viewModel.setExperience(exp) },
-                            label = {
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) (if (isDark) Cyan else OceanBlue) else (if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD)),
+                            border = BorderStroke(1.dp, if (isSelected) (if (isDark) Cyan else OceanBlue) else (if (isDark) DarkBorder else Color(0xFFDCE6F5))),
+                            modifier = Modifier.height(38.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                                    .fillMaxHeight(),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
                                     text = exp,
                                     fontSize = 12.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) (if (isDark) DeepNavy else Color.White) else (if (isDark) DarkTextSecondary else DeepNavy),
                                     maxLines = 1,
                                     softWrap = false
                                 )
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
-                                selected = isSelected,
-                                borderColor = if (isDark) DarkBorder else Color(0xFFDCE6F5),
-                                selectedBorderColor = if (isDark) Cyan else OceanBlue
-                            ),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = if (isDark) Cyan else OceanBlue,
-                                selectedLabelColor = if (isDark) DeepNavy else Color.White,
-                                containerColor = if (isDark) DarkSurfaceVariant else Color(0xFFF1F6FD),
-                                labelColor = if (isDark) DarkTextSecondary else DeepNavy
-                            )
-                        )
+                            }
+                        }
                     }
                 }
             }
@@ -316,59 +449,38 @@ fun MatchScreen(
             }
         }
 
-        // Offline / Server Warning Banner (Non-blocking)
-        if (isOfflineMode || uiState.errorMessage != null) {
-            Surface(
-                color = if (isDark) Color(0xFF2C2214) else Color(0xFFFFF7E6),
-                border = BorderStroke(1.dp, if (isDark) Color(0xFF874D00) else Color(0xFFFFD591)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+        // Server Error Banner
+        if (uiState.errorMessage != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
                         Icons.Default.CloudOff,
                         contentDescription = null,
-                        tint = Color(0xFFFA8C16),
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(20.dp)
                     )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Offline Demo Mode (Local Data)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            color = if (isDark) Color(0xFFFFD591) else Color(0xFFD46B08)
-                        )
-                        Text(
-                            "Backend unreachable at ${ApiConstants.BASE_URL}",
-                            fontSize = 10.sp,
-                            color = if (isDark) Color(0xFFD9D9D9) else Color(0xFF595959)
-                        )
-                    }
-                    TextButton(
-                        onClick = { showServerConfigDialog = true },
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text("⚙️ IP", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
+                    Text(
+                        text = uiState.errorMessage ?: "Failed to connect to backend",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontSize = 12.sp,
+                        modifier = Modifier.weight(1f)
+                    )
                     TextButton(
                         onClick = { viewModel.loadRiders() },
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Text("Retry", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Retry", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
-        }
-
-        if (showServerConfigDialog) {
-            ServerConfigDialog(
-                onDismiss = { showServerConfigDialog = false },
-                onUrlSaved = { viewModel.loadRiders() }
-            )
         }
 
         // Riders List / Empty State
@@ -419,11 +531,158 @@ fun MatchScreen(
             uiState.riders.forEach { rider ->
                 RiderCard(
                     rider = rider,
-                    onViewDetails = onSelectRider
+                    onViewDetails = onSelectRider,
+                    onConnectClick = { selected ->
+                        riderToConnect = selected
+                        startLocation = if (selected.startingPoint.isNotBlank()) selected.startingPoint else "Chennai"
+                        travelDate = selected.dates
+                        proposedBudget = selected.budget.toString()
+                        message = "Hey ${selected.name}! Saw your ride to ${selected.destination}. Would love to ride together!"
+                    }
                 )
             }
         }
 
         Spacer(Modifier.height(10.dp))
     }
+
+    // Snackbar Host
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(16.dp)
+    )
+
+    // SEND RIDE REQUEST DIALOG
+    if (riderToConnect != null) {
+        val targetRider = riderToConnect!!
+        AlertDialog(
+            onDismissRequest = { riderToConnect = null },
+            containerColor = if (isDark) DarkSurface else Color.White,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(if (isDark) Cyan.copy(alpha = 0.2f) else OceanBlue.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = null,
+                            tint = if (isDark) Cyan else OceanBlue,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Text(
+                        "Send Ride Request",
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) DarkTextPrimary else DeepNavy
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "Invite ${targetRider.name} to ride together. When accepted, you will become connected riding partners.",
+                        fontSize = 12.sp,
+                        color = if (isDark) DarkTextSecondary else Color.DarkGray
+                    )
+
+                    OutlinedTextField(
+                        value = startLocation,
+                        onValueChange = { startLocation = it },
+                        label = { Text("Start Location") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = targetRider.destination,
+                        onValueChange = { },
+                        readOnly = true,
+                        label = { Text("Destination") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = travelDate,
+                        onValueChange = { travelDate = it },
+                        label = { Text("Travel Date") },
+                        placeholder = { Text("e.g. Nov 15-17, 2026") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = proposedBudget,
+                        onValueChange = { proposedBudget = it },
+                        label = { Text("Proposed Budget (₹)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = message,
+                        onValueChange = { message = it },
+                        label = { Text("Invitation Note / Message") },
+                        placeholder = { Text("Introduce yourself and share ride details...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        maxLines = 4,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val receiverId = targetRider.id.toIntOrNull() ?: 1
+                        val budgetInt = proposedBudget.toIntOrNull() ?: targetRider.budget
+                        rideRequestViewModel.sendRideRequest(
+                            receiverId = receiverId,
+                            startLocation = startLocation,
+                            destination = targetRider.destination,
+                            travelDate = travelDate,
+                            proposedBudget = budgetInt,
+                            message = message,
+                            onSuccess = {
+                                riderToConnect = null
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isDark) Cyan else OceanBlue,
+                        contentColor = if (isDark) DeepNavy else Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Send Request", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { riderToConnect = null }) {
+                    Text("Cancel", color = if (isDark) DarkTextSecondary else Color.Gray)
+                }
+            }
+        )
+    }
+}
 }

@@ -5,7 +5,7 @@ import com.example.routemate.data.remote.RetrofitClient
 import com.example.routemate.data.remote.TripStatusDto
 
 class TripRepository {
-    private val apiService = RetrofitClient.getApiService()
+    private val apiService get() = RetrofitClient.getApiService()
 
     suspend fun requestJoinTrip(tripId: String): Result<JoinResponseDto> {
         return try {
