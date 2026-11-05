@@ -13,6 +13,9 @@ import kotlinx.coroutines.launch
 
 data class ProfileState(
     val photoUri: Uri? = null,
+    val avatarUrl: String? = null,
+    val themePreference: String = "system",
+    val isUploadingPhoto: Boolean = false,
     val isEditing: Boolean = false,
     val isPreviewingPublic: Boolean = false,
     val isLoading: Boolean = false,
@@ -97,35 +100,37 @@ class ProfileViewModel(
                 onSuccess = { dto ->
                     _uiState.update { current ->
                         current.copy(
-                            fullName = dto.fullName,
-                            email = dto.email,
-                            phoneNumber = dto.phoneNumber ?: current.phoneNumber,
+                            fullName = dto.fullName?.takeIf { it.isNotBlank() } ?: current.fullName,
+                            email = dto.email?.takeIf { it.isNotBlank() } ?: current.email,
+                            phoneNumber = dto.phoneNumber?.takeIf { it.isNotBlank() } ?: current.phoneNumber,
                             age = dto.age?.toString() ?: current.age,
-                            cityState = dto.cityState ?: current.cityState,
-                            bio = dto.bio ?: current.bio,
-                            ridingExperience = dto.ridingExperience,
-                            yearsExperience = dto.yearsExperience.toString(),
-                            motorcycleBrandModel = dto.motorcycleBrandModel ?: current.motorcycleBrandModel,
+                            cityState = dto.cityState?.takeIf { it.isNotBlank() } ?: current.cityState,
+                            bio = dto.bio?.takeIf { it.isNotBlank() } ?: current.bio,
+                            ridingExperience = dto.ridingExperience?.takeIf { it.isNotBlank() } ?: current.ridingExperience,
+                            yearsExperience = dto.yearsExperience?.toString() ?: current.yearsExperience,
+                            motorcycleBrandModel = dto.motorcycleBrandModel?.takeIf { it.isNotBlank() } ?: current.motorcycleBrandModel,
                             motorcycleCc = dto.motorcycleCc?.toString() ?: current.motorcycleCc,
-                            ridingStyles = if (dto.ridingStylesList.isNotEmpty()) dto.ridingStylesList else current.ridingStyles,
-                            typicalDistance = dto.typicalDistance,
-                            preferredDestinations = if (dto.preferredDestinationsList.isNotEmpty()) dto.preferredDestinationsList else current.preferredDestinations,
-                            preferredGroupSize = dto.preferredGroupSize,
-                            isOpenToNewTeams = dto.isOpenToTeams == 1,
-                            isWillingToMentor = dto.isWillingToMentor == 1,
-                            minBudget = dto.minBudget.toString(),
-                            maxBudget = dto.maxBudget.toString(),
-                            preferredDuration = dto.preferredDuration,
-                            preferredDepartureTime = dto.preferredDepartureTime,
-                            travelPace = dto.travelPace,
-                            accommodationPreference = dto.accommodationPreference,
-                            startingCity = dto.startingCity,
-                            helmetGearConfirmed = dto.helmetGearConfirmed == 1,
-                            emergencyContactName = dto.emergencyContactName ?: current.emergencyContactName,
-                            emergencyContactPhone = dto.emergencyContactPhone ?: current.emergencyContactPhone,
-                            preferredLanguage = dto.preferredLanguage,
-                            shareLiveLocation = dto.shareLiveLocation == 1,
-                            agreeSafetyGuidelines = dto.agreeSafetyGuidelines == 1,
+                            ridingStyles = if (!dto.ridingStylesList.isNullOrEmpty()) dto.ridingStylesList else current.ridingStyles,
+                            typicalDistance = dto.typicalDistance?.takeIf { it.isNotBlank() } ?: current.typicalDistance,
+                            preferredDestinations = if (!dto.preferredDestinationsList.isNullOrEmpty()) dto.preferredDestinationsList else current.preferredDestinations,
+                            preferredGroupSize = dto.preferredGroupSize?.takeIf { it.isNotBlank() } ?: current.preferredGroupSize,
+                            isOpenToNewTeams = (dto.isOpenToTeams ?: 1) == 1,
+                            isWillingToMentor = (dto.isWillingToMentor ?: 1) == 1,
+                            minBudget = dto.minBudget?.toString() ?: current.minBudget,
+                            maxBudget = dto.maxBudget?.toString() ?: current.maxBudget,
+                            preferredDuration = dto.preferredDuration?.takeIf { it.isNotBlank() } ?: current.preferredDuration,
+                            preferredDepartureTime = dto.preferredDepartureTime?.takeIf { it.isNotBlank() } ?: current.preferredDepartureTime,
+                            travelPace = dto.travelPace?.takeIf { it.isNotBlank() } ?: current.travelPace,
+                            accommodationPreference = dto.accommodationPreference?.takeIf { it.isNotBlank() } ?: current.accommodationPreference,
+                            startingCity = dto.startingCity?.takeIf { it.isNotBlank() } ?: current.startingCity,
+                            helmetGearConfirmed = (dto.helmetGearConfirmed ?: 1) == 1,
+                            emergencyContactName = dto.emergencyContactName?.takeIf { it.isNotBlank() } ?: current.emergencyContactName,
+                            emergencyContactPhone = dto.emergencyContactPhone?.takeIf { it.isNotBlank() } ?: current.emergencyContactPhone,
+                            preferredLanguage = dto.preferredLanguage?.takeIf { it.isNotBlank() } ?: current.preferredLanguage,
+                            shareLiveLocation = (dto.shareLiveLocation ?: 1) == 1,
+                            agreeSafetyGuidelines = (dto.agreeSafetyGuidelines ?: 1) == 1,
+                            avatarUrl = dto.avatarUrl ?: current.avatarUrl,
+                            themePreference = dto.themePreference ?: current.themePreference,
                             isLoading = false
                         )
                     }
@@ -139,6 +144,49 @@ class ProfileViewModel(
 
     fun onPhotoSelected(uri: Uri?) {
         _uiState.update { it.copy(photoUri = uri, successMessage = null) }
+    }
+
+    fun onPhotoSelected(context: android.content.Context, uri: Uri?) {
+        if (uri == null) return
+        _uiState.update { it.copy(photoUri = uri, isUploadingPhoto = true, successMessage = null, validationError = null) }
+
+        viewModelScope.launch {
+            try {
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                if (bytes != null && bytes.isNotEmpty()) {
+                    val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                    val result = repository.uploadProfilePhoto(base64)
+                    result.fold(
+                        onSuccess = { res ->
+                            _uiState.update {
+                                it.copy(
+                                    avatarUrl = res.url,
+                                    isUploadingPhoto = false,
+                                    successMessage = "Profile photo uploaded and saved to MySQL successfully ✓"
+                                )
+                            }
+                        },
+                        onFailure = { error ->
+                            _uiState.update {
+                                it.copy(
+                                    isUploadingPhoto = false,
+                                    validationError = "Photo saved locally, server upload failed: ${error.localizedMessage}"
+                                )
+                            }
+                        }
+                    )
+                } else {
+                    _uiState.update { it.copy(isUploadingPhoto = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isUploadingPhoto = false,
+                        validationError = "Failed to upload photo: ${e.localizedMessage}"
+                    )
+                }
+            }
+        }
     }
 
     fun startEditing() {
@@ -212,7 +260,9 @@ class ProfileViewModel(
                 emergencyContactPhone = currentState.emergencyContactPhone,
                 preferredLanguage = currentState.preferredLanguage,
                 shareLiveLocation = if (currentState.shareLiveLocation) 1 else 0,
-                agreeSafetyGuidelines = if (currentState.agreeSafetyGuidelines) 1 else 0
+                agreeSafetyGuidelines = if (currentState.agreeSafetyGuidelines) 1 else 0,
+                avatarUrl = currentState.avatarUrl,
+                themePreference = currentState.themePreference
             )
 
             val result = repository.updateProfile(dto)
@@ -287,4 +337,9 @@ class ProfileViewModel(
     fun updatePreferredLanguage(value: String) = _uiState.update { it.copy(preferredLanguage = value) }
     fun updateShareLiveLocation(value: Boolean) = _uiState.update { it.copy(shareLiveLocation = value) }
     fun updateAgreeSafetyGuidelines(value: Boolean) = _uiState.update { it.copy(agreeSafetyGuidelines = value) }
+
+    fun updateThemePreference(theme: String) {
+        _uiState.update { it.copy(themePreference = theme) }
+        saveProfile()
+    }
 }

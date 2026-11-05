@@ -2,6 +2,7 @@ package com.example.routemate.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.routemate.data.remote.CreateTeamRequest
 import com.example.routemate.data.repository.TeamRepository
 import com.example.routemate.models.Team
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.launch
 data class TeamsUiState(
     val teams: List<Team> = emptyList(),
     val isLoading: Boolean = false,
+    val isCreatingTeam: Boolean = false,
     val errorMessage: String? = null,
     val joiningTeamId: String? = null,
     val actionMessage: String? = null
@@ -85,6 +87,61 @@ class TeamsViewModel(
 
     fun clearActionMessage() {
         _uiState.update { it.copy(actionMessage = null) }
+    }
+
+    fun createTeam(
+        name: String,
+        destination: String,
+        startingPoint: String,
+        dates: String,
+        route: String = "",
+        budget: Int = 2500,
+        target: Int = 6,
+        level: String = "All levels",
+        distance: String = "160 km",
+        duration: String = "3.5 hrs",
+        meetingPoint: String = "",
+        description: String = "",
+        onSuccess: () -> Unit = {}
+    ) {
+        _uiState.update { it.copy(isCreatingTeam = true, errorMessage = null, actionMessage = null) }
+        viewModelScope.launch {
+            val req = CreateTeamRequest(
+                name = name,
+                destination = destination,
+                startingPoint = startingPoint,
+                dates = dates,
+                route = if (route.isNotBlank()) route else "$startingPoint - $destination",
+                budget = budget,
+                target = target,
+                level = level,
+                distance = distance,
+                duration = duration,
+                meetingPoint = if (meetingPoint.isNotBlank()) meetingPoint else startingPoint,
+                description = description
+            )
+            val result = repository.createTeam(req)
+            result.fold(
+                onSuccess = { createdTeam ->
+                    _uiState.update {
+                        it.copy(
+                            isCreatingTeam = false,
+                            actionMessage = "Team '${createdTeam.name}' created & saved to MySQL!"
+                        )
+                    }
+                    loadTeams()
+                    onSuccess()
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            isCreatingTeam = false,
+                            errorMessage = error.localizedMessage ?: "Failed to save team to MySQL"
+                        )
+                    }
+                }
+            )
+        }
     }
 }
 

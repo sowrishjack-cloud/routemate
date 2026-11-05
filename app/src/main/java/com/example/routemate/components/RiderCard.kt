@@ -103,7 +103,7 @@ fun RiderCard(
                                 modifier = Modifier.size(11.dp)
                             )
                             Text(
-                                text = "From: ${rider.startingPoint}",
+                                text = "From: ${rider.startingPoint ?: "Chennai"}",
                                 color = Color.White,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -119,7 +119,7 @@ fun RiderCard(
                         .padding(14.dp)
                 ) {
                     Text(
-                        text = rider.destination,
+                        text = rider.destination ?: "Scenic Route",
                         color = Color.White,
                         fontSize = 19.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -137,14 +137,14 @@ fun RiderCard(
                             modifier = Modifier.size(11.dp)
                         )
                         Text(
-                            text = rider.dates,
+                            text = rider.dates ?: "Upcoming",
                             color = Color.White.copy(alpha = 0.92f),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
                         )
                         Text("•", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp)
                         Text(
-                            text = DestinationImageHelper.getDestinationTagline(rider.destination),
+                            text = DestinationImageHelper.getDestinationTagline(rider.destination ?: ""),
                             color = Color.White.copy(alpha = 0.85f),
                             fontSize = 10.sp,
                             maxLines = 1
@@ -165,7 +165,7 @@ fun RiderCard(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                rider.name,
+                                rider.name ?: "Rider",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
                                 color = if (isDark) DarkTextPrimary else DeepNavy
@@ -180,7 +180,7 @@ fun RiderCard(
                             }
                         }
                         Text(
-                            "Experience: ${rider.level}",
+                            "Experience: ${rider.level ?: "Moderate"}",
                             fontSize = 12.sp,
                             color = if (isDark) DarkTextSecondary else Color.Gray
                         )
@@ -195,7 +195,7 @@ fun RiderCard(
                 }
 
                 Text(
-                    rider.description,
+                    rider.description ?: "",
                     fontSize = 12.sp,
                     color = if (isDark) DarkTextSecondary else Color.Gray,
                     maxLines = 2

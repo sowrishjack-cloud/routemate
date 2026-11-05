@@ -171,7 +171,7 @@ fun AlertHistoryCard(
             }
 
             if (alert.message?.isNotBlank() == true) {
-                Text(alert.message, fontSize = 12.sp, color = if (isDark) DarkTextSecondary else Color.DarkGray)
+                Text(alert.message ?: "", fontSize = 12.sp, color = if (isDark) DarkTextSecondary else Color.DarkGray)
             }
 
             if (alert.recipients.isNotEmpty()) {

@@ -184,7 +184,7 @@ fun RideRequestDetailsScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    sender.name.take(2).uppercase(),
+                                    (sender.name ?: "Rider").take(2).uppercase(),
                                     color = Cyan,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 20.sp

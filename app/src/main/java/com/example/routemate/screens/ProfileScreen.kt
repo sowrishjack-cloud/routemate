@@ -38,6 +38,7 @@ import com.example.routemate.R
 import com.example.routemate.components.InfoCard
 import com.example.routemate.components.ServerConfigDialog
 import com.example.routemate.data.remote.ApiConstants
+import com.example.routemate.data.remote.RetrofitClient
 import com.example.routemate.data.remote.SessionManager
 import com.example.routemate.models.AppSettingsState
 import com.example.routemate.ui.theme.DarkBackground
@@ -97,7 +98,7 @@ fun ProfileScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            viewModel.onPhotoSelected(uri)
+            viewModel.onPhotoSelected(context, uri)
         }
     }
 
@@ -176,6 +177,10 @@ fun ProfileScreen(
                 Box(
                     contentAlignment = Alignment.BottomEnd
                 ) {
+                    val resolvedAvatarUrl = remember(state.avatarUrl) {
+                        RetrofitClient.resolveMediaUrl(state.avatarUrl)
+                    }
+
                     Box(
                         modifier = Modifier
                             .size(110.dp)
@@ -191,6 +196,13 @@ fun ProfileScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
+                        } else if (!resolvedAvatarUrl.isNullOrBlank()) {
+                            Image(
+                                painter = rememberAsyncImagePainter(resolvedAvatarUrl),
+                                contentDescription = "Profile Photo",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
                         } else {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_avatar_1),
@@ -198,6 +210,21 @@ fun ProfileScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
+                        }
+
+                        if (state.isUploadingPhoto) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.5f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    color = Cyan,
+                                    strokeWidth = 3.dp
+                                )
+                            }
                         }
                     }
 
@@ -944,7 +971,42 @@ fun ProfileScreen(
             }
         }
 
-        // Section 5: Backend Server Connection
+        // Section 5: App Theme & Display Preference (Synced to MySQL users.theme_preference)
+        SectionCard(title = "Theme & Display Preferences") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Dark Mode Theme",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = DeepNavy
+                    )
+                    Text(
+                        if (isDark) "Dark theme enabled (synced to MySQL)" else "Light theme active (synced to MySQL)",
+                        fontSize = 12.sp,
+                        color = if (isDark) DarkTextSecondary else Color.Gray
+                    )
+                }
+
+                Switch(
+                    checked = isDark,
+                    onCheckedChange = { checked ->
+                        AppSettingsState.isDarkMode = checked
+                        viewModel.updateThemePreference(if (checked) "dark" else "light")
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Cyan
+                    )
+                )
+            }
+        }
+
+        // Section 6: Backend Server Connection
         SectionCard(title = "Backend Server Connection") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1222,15 +1284,16 @@ private fun SectionCard(
 @Composable
 private fun ProfileField(
     label: String,
-    value: String,
+    value: String?,
     isEditing: Boolean,
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
     onValueChange: (String) -> Unit
 ) {
+    val displayVal = value ?: ""
     if (isEditing) {
         OutlinedTextField(
-            value = value,
+            value = displayVal,
             onValueChange = onValueChange,
             label = { Text(label) },
             modifier = Modifier.fillMaxWidth(),
@@ -1243,7 +1306,7 @@ private fun ProfileField(
             Text(label, fontSize = 12.sp, color = if (AppSettingsState.isDarkMode) DarkTextSecondary else Color.Gray)
             Spacer(Modifier.height(2.dp))
             Text(
-                value.ifBlank { "Not set" },
+                displayVal.ifBlank { "Not set" },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = DeepNavy,

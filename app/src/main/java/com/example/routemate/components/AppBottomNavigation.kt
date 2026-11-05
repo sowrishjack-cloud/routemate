@@ -47,13 +47,8 @@ fun AppBottomNavigation(
         )
     }
 
-    // Follow target page and progress during dragging so selection indicator is synchronized
-    val activeIndex = when {
-        !pagerState.isScrollInProgress -> pagerState.currentPage
-        pagerState.currentPageOffsetFraction > 0.3f -> (pagerState.currentPage + 1).coerceAtMost(tabs.size - 1)
-        pagerState.currentPageOffsetFraction < -0.3f -> (pagerState.currentPage - 1).coerceAtLeast(0)
-        else -> pagerState.targetPage.coerceIn(0, tabs.size - 1)
-    }
+    // Selected tab matches the pager's active page directly
+    val activeIndex = pagerState.currentPage.coerceIn(0, tabs.size - 1)
     val currentRoute = tabRoutes.getOrNull(activeIndex) ?: "home"
 
     Box(

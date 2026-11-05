@@ -28,6 +28,9 @@ interface ApiService {
     @PUT("profile")
     suspend fun updateProfile(@Body profile: ProfileDto): ApiResponse<Unit>
 
+    @POST("profile/photo")
+    suspend fun uploadProfilePhoto(@Body request: UploadPhotoRequest): ApiResponse<UploadPhotoResponseDto>
+
     // --- HOME FEED ---
     @GET("home")
     suspend fun getHomeFeed(): ApiResponse<HomeFeedDto>
@@ -50,10 +53,16 @@ interface ApiService {
     @GET("teams/{id}")
     suspend fun getTeamDetails(@Path("id") id: String): ApiResponse<TeamDto>
 
+    @POST("teams")
+    suspend fun createTeam(@Body request: CreateTeamRequest): ApiResponse<TeamDto>
+
     @POST("teams/{id}/join")
     suspend fun joinTeam(@Path("id") id: String): ApiResponse<JoinResponseDto>
 
     // --- TRIPS & REQUESTS ---
+    @POST("trips")
+    suspend fun createTrip(@Body request: CreateTripRequest): ApiResponse<TripCreatedResponseDto>
+
     @POST("trips/{id}/join")
     suspend fun requestJoinTrip(@Path("id") id: String): ApiResponse<JoinResponseDto>
 
@@ -63,6 +72,9 @@ interface ApiService {
     // --- LEARNING HUB ---
     @GET("learning")
     suspend fun getLearningResources(): ApiResponse<List<LearningResourceDto>>
+
+    @POST("learning/{id}/progress")
+    suspend fun saveLearningProgress(@Path("id") id: Int): ApiResponse<LearningProgressDto>
 
     // --- NOTIFICATIONS ---
     @GET("notifications")

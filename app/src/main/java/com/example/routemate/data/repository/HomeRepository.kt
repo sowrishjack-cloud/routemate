@@ -19,43 +19,43 @@ class HomeRepository {
 
                 val destinations = feed.destinations.map { d ->
                     PopularDestination(
-                        name = d.name,
-                        description = d.description,
-                        imageRes = mapDestinationImage(d.name)
+                        name = d.safeName,
+                        description = d.safeDescription,
+                        imageRes = mapDestinationImage(d.safeName)
                     )
                 }
 
                 val recommendedRides = feed.recommendedRides.map { r ->
                     RecommendedRide(
-                        route = r.route,
-                        date = r.date,
-                        distance = r.distance,
-                        budget = r.budget,
-                        riders = r.riders,
+                        route = r.safeRoute,
+                        date = r.safeDate,
+                        distance = r.safeDistance,
+                        budget = r.safeBudget,
+                        riders = r.safeRiders,
                         tripId = r.id.toString(),
-                        destination = r.destination,
-                        startingPoint = r.startingPoint,
-                        duration = r.duration,
-                        meetingPoint = r.meetingPoint,
-                        title = r.title
+                        destination = r.safeDestination,
+                        startingPoint = r.startingPoint ?: "Start",
+                        duration = r.duration ?: "2 hrs",
+                        meetingPoint = r.meetingPoint ?: "Meeting Point",
+                        title = r.safeTitle
                     )
                 }
 
                 val nearbyRiders = feed.nearbyRiders.map { n ->
                     NearbyRiderItem(
-                        name = n.name,
-                        experience = n.experience,
-                        destination = n.destination,
+                        name = n.safeName,
+                        experience = n.safeExperience,
+                        destination = n.safeDestination,
                         avatarRes = mapAvatarImage(n.avatarRes),
-                        tripId = n.tripId.toString(),
-                        dates = n.dates,
-                        distance = n.distance,
-                        duration = n.duration,
-                        budget = n.budget,
-                        startingPoint = n.startingPoint,
-                        meetingPoint = n.meetingPoint,
-                        riderCount = n.riderCount,
-                        title = n.title
+                        tripId = (n.tripId ?: 0).toString(),
+                        dates = n.safeDates,
+                        distance = n.safeDistance,
+                        duration = n.duration ?: "2 hrs",
+                        budget = n.safeBudget,
+                        startingPoint = n.startingPoint ?: "Start",
+                        meetingPoint = n.meetingPoint ?: "Meeting Point",
+                        riderCount = n.riderCount ?: "1 rider",
+                        title = n.title ?: "Ride"
                     )
                 }
 

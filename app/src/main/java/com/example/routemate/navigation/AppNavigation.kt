@@ -1,5 +1,6 @@
 package com.example.routemate.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -67,16 +68,30 @@ fun AppNavigation() {
     val navigateToTab: (String) -> Unit = remember(pagerState, tabRoutes, coroutineScope) {
         { route ->
             val targetPageIndex = tabRoutes.indexOf(route)
-            if (targetPageIndex >= 0) {
+            if (targetPageIndex in 0 until tabRoutes.size && targetPageIndex != pagerState.currentPage) {
                 coroutineScope.launch {
-                    if (kotlin.math.abs(targetPageIndex - pagerState.currentPage) > 1) {
-                        val prePage = if (targetPageIndex > pagerState.currentPage) targetPageIndex - 1 else targetPageIndex + 1
-                        pagerState.scrollToPage(prePage)
-                    }
-                    pagerState.animateScrollToPage(
-                        page = targetPageIndex,
-                        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
-                    )
+                    pagerState.scrollToPage(targetPageIndex)
+                }
+            }
+        }
+    }
+
+    BackHandler(enabled = hasActiveOverlay || pagerState.currentPage != 0) {
+        when {
+            selectedRideRequestId != null -> selectedRideRequestId = null
+            isShowingIncomingRequests -> isShowingIncomingRequests = false
+            isShowingSentRequests -> isShowingSentRequests = false
+            isShowingConnections -> isShowingConnections = false
+            isShowingEmergencyHistory -> isShowingEmergencyHistory = false
+            isShowingEmergencySos -> isShowingEmergencySos = false
+            isShowingVerification -> isShowingVerification = false
+            isShowingReviews -> isShowingReviews = false
+            selectedChatTeam != null -> selectedChatTeam = null
+            selectedBudgetTeam != null -> selectedBudgetTeam = null
+            isShowingTripDetails -> isShowingTripDetails = false
+            pagerState.currentPage != 0 -> {
+                coroutineScope.launch {
+                    pagerState.scrollToPage(0)
                 }
             }
         }
@@ -233,13 +248,9 @@ fun AppNavigation() {
                         state = pagerState,
                         modifier = Modifier.fillMaxSize(),
                         userScrollEnabled = true,
-                        beyondViewportPageCount = 1,
+                        beyondViewportPageCount = 0,
                         pageSpacing = 0.dp,
-                        key = { tabRoutes[it] },
-                        flingBehavior = PagerDefaults.flingBehavior(
-                            state = pagerState,
-                            pagerSnapDistance = PagerSnapDistance.atMost(1)
-                        )
+                        key = { tabRoutes[it] }
                     ) { pageIndex ->
                         when (pageIndex) {
                             0 -> HomeScreen(

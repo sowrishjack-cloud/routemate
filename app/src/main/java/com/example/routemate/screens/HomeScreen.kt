@@ -14,6 +14,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import com.example.routemate.components.ServerConfigDialog
 import com.example.routemate.data.remote.ApiConstants
 import com.example.routemate.data.remote.SessionManager
@@ -105,6 +107,7 @@ fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel()
 ) {
     val homeUiState by homeViewModel.uiState.collectAsState()
+    var showCreateTripDialog by remember { mutableStateOf(false) }
 
     val destinations = if (homeUiState.destinations.isNotEmpty()) {
         homeUiState.destinations
@@ -234,7 +237,11 @@ fun HomeScreen(
         PopularDestinationsSection(destinations = destinations)
 
         // 5. Recommended Rides
-        RecommendedRidesSection(rides = recommendedRides, onNavigateToTab = onNavigateToTab)
+        RecommendedRidesSection(
+            rides = recommendedRides,
+            onNavigateToTab = onNavigateToTab,
+            onCreateTrip = { showCreateTripDialog = true }
+        )
 
         // 6. Budget-focused Feature Card
         BudgetFeatureCard(onNavigateToTab = onNavigateToTab)
@@ -243,6 +250,31 @@ fun HomeScreen(
         NearbyRidersSection(riders = nearbyRiders, onNavigateToTab = onNavigateToTab)
 
         Spacer(Modifier.height(10.dp))
+    }
+
+    if (showCreateTripDialog) {
+        CreateTripDialog(
+            isDark = AppSettingsState.isDarkMode,
+            isLoading = homeUiState.isCreatingTrip,
+            onDismiss = { showCreateTripDialog = false },
+            onSubmit = { title, destination, startPoint, dates, distance, duration, budget, maxCapacity, level, description ->
+                homeViewModel.createTrip(
+                    title = title,
+                    destination = destination,
+                    startingPoint = startPoint,
+                    dates = dates,
+                    distance = distance,
+                    duration = duration,
+                    budget = budget,
+                    maxCapacity = maxCapacity,
+                    levelRequired = level,
+                    description = description,
+                    onSuccess = {
+                        showCreateTripDialog = false
+                    }
+                )
+            }
+        )
     }
 }
 
@@ -1510,7 +1542,8 @@ private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
 @Composable
 private fun RecommendedRidesSection(
     rides: List<RecommendedRide>,
-    onNavigateToTab: (String) -> Unit
+    onNavigateToTab: (String) -> Unit,
+    onCreateTrip: () -> Unit
 ) {
     val isDark = AppSettingsState.isDarkMode
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1525,11 +1558,19 @@ private fun RecommendedRidesSection(
                 fontWeight = FontWeight.Bold,
                 color = if (isDark) DarkTextPrimary else DeepNavy
             )
-            Text(
-                "Demo Trips",
-                fontSize = 11.sp,
-                color = if (isDark) DarkTextSecondary else Color.Gray
-            )
+            Button(
+                onClick = onCreateTrip,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDark) Cyan else OceanBlue,
+                    contentColor = if (isDark) DeepNavy else Color.White
+                ),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("+ Create Trip", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
         rides.forEach { ride ->
@@ -1552,7 +1593,7 @@ private fun RecommendedRidesSection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            ride.route,
+                            ride.route ?: "Scenic Route",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isDark) DarkTextPrimary else DeepNavy
@@ -1570,12 +1611,12 @@ private fun RecommendedRidesSection(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "${ride.date} • ${ride.distance}",
+                            "${ride.date ?: "Upcoming"} • ${ride.distance ?: "100 km"}",
                             fontSize = 12.sp,
                             color = if (isDark) DarkTextSecondary else Color.Gray
                         )
                         Text(
-                            ride.riders,
+                            ride.riders ?: "1 rider",
                             fontSize = 12.sp,
                             color = AccentGreen,
                             fontWeight = FontWeight.SemiBold
@@ -1681,21 +1722,21 @@ private fun NearbyRidersSection(
                     ) {
                         Image(
                             painter = painterResource(id = rider.avatarRes),
-                            contentDescription = rider.name,
+                            contentDescription = rider.name ?: "Rider",
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
                         )
 
                         Text(
-                            rider.name,
+                            rider.name ?: "Rider",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = if (isDark) DarkTextPrimary else DeepNavy
                         )
 
                         Text(
-                            "${rider.destination}\n${rider.experience}",
+                            "${rider.destination ?: "Destination"}\n${rider.experience ?: "Experienced"}",
                             fontSize = 10.sp,
                             color = if (isDark) DarkTextSecondary else Color.Gray,
                             maxLines = 2
@@ -1715,3 +1756,220 @@ private fun NearbyRidersSection(
         }
     }
 }
+
+@Composable
+private fun CreateTripDialog(
+    isDark: Boolean,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onSubmit: (title: String, destination: String, startPoint: String, dates: String, distance: String, duration: String, budget: Int, maxCapacity: Int, level: String, description: String) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var destination by remember { mutableStateOf("") }
+    var startingPoint by remember { mutableStateOf("Chennai") }
+    var dates by remember { mutableStateOf("") }
+    var distance by remember { mutableStateOf("160 km") }
+    var duration by remember { mutableStateOf("3.5 hrs") }
+    var budgetStr by remember { mutableStateOf("2500") }
+    var maxCapacityStr by remember { mutableStateOf("6") }
+    var level by remember { mutableStateOf("Any") }
+    var description by remember { mutableStateOf("") }
+    var validationError by remember { mutableStateOf<String?>(null) }
+
+    val levels = listOf("Any", "Beginner", "Intermediate", "Experienced")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = if (isDark) DarkSurface else Color.White,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(Icons.Default.AddLocationAlt, contentDescription = null, tint = Cyan)
+                Text(
+                    "Create New Trip",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = if (isDark) DarkTextPrimary else DeepNavy
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    "Publish a new motorcycle trip to RouteMate. Saved directly to MySQL database.",
+                    fontSize = 12.sp,
+                    color = if (isDark) DarkTextSecondary else Color.Gray
+                )
+
+                if (validationError != null) {
+                    Text(
+                        validationError!!,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it; validationError = null },
+                    label = { Text("Trip Title *") },
+                    placeholder = { Text("e.g. Coastal Sunrise Ride to Pondy") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = destination,
+                    onValueChange = { destination = it; validationError = null },
+                    label = { Text("Destination *") },
+                    placeholder = { Text("e.g. Pondicherry") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = startingPoint,
+                    onValueChange = { startingPoint = it; validationError = null },
+                    label = { Text("Starting Point *") },
+                    placeholder = { Text("e.g. Chennai (ECR Toll)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = dates,
+                    onValueChange = { dates = it; validationError = null },
+                    label = { Text("Trip Dates *") },
+                    placeholder = { Text("e.g. Nov 15 - 17, 2026") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = budgetStr,
+                        onValueChange = { budgetStr = it.filter { c -> c.isDigit() } },
+                        label = { Text("Est. Budget (₹)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = maxCapacityStr,
+                        onValueChange = { maxCapacityStr = it.filter { c -> c.isDigit() }.take(2) },
+                        label = { Text("Max Riders") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = distance,
+                        onValueChange = { distance = it },
+                        label = { Text("Distance") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = duration,
+                        onValueChange = { duration = it },
+                        label = { Text("Duration") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Text(
+                    "Experience Level Required:",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isDark) DarkTextPrimary else DeepNavy
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    levels.forEach { lvl ->
+                        FilterChip(
+                            selected = level == lvl,
+                            onClick = { level = lvl },
+                            label = { Text(lvl, fontSize = 11.sp) }
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Trip Description") },
+                    placeholder = { Text("Scenic coastal highway ride, fuel stops, and cafe meet...") },
+                    maxLines = 3,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (title.isBlank()) {
+                        validationError = "Please enter a trip title"
+                        return@Button
+                    }
+                    if (destination.isBlank()) {
+                        validationError = "Please enter a destination"
+                        return@Button
+                    }
+                    if (startingPoint.isBlank()) {
+                        validationError = "Please enter a starting point"
+                        return@Button
+                    }
+                    if (dates.isBlank()) {
+                        validationError = "Please enter trip dates"
+                        return@Button
+                    }
+                    val budget = budgetStr.toIntOrNull() ?: 2500
+                    val maxCapacity = maxCapacityStr.toIntOrNull() ?: 6
+                    onSubmit(title, destination, startingPoint, dates, distance, duration, budget, maxCapacity, level, description)
+                },
+                enabled = !isLoading,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDark) Cyan else OceanBlue,
+                    contentColor = if (isDark) DeepNavy else Color.White
+                ),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = if (isDark) DeepNavy else Color.White
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text("Publish to MySQL", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = if (isDark) DarkTextSecondary else Color.Gray)
+            }
+        }
+    )
+}
+

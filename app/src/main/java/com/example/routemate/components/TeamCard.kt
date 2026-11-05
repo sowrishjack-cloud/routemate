@@ -40,11 +40,12 @@ fun TeamCard(
     var requested by remember { mutableStateOf(false) }
     val isDark = AppSettingsState.isDarkMode
 
-    val imageRes = when (team.destination.lowercase()) {
-        "pondicherry" -> R.drawable.img_pondicherry
-        "yelagiri" -> R.drawable.img_yelagiri
-        "ooty" -> R.drawable.img_ooty
-        "goa" -> R.drawable.img_goa
+    val destinationSafe = (team.destination ?: "").lowercase()
+    val imageRes = when {
+        destinationSafe.contains("pondicherry") -> R.drawable.img_pondicherry
+        destinationSafe.contains("yelagiri") -> R.drawable.img_yelagiri
+        destinationSafe.contains("ooty") -> R.drawable.img_ooty
+        destinationSafe.contains("goa") -> R.drawable.img_goa
         else -> R.drawable.img_hero_banner
     }
 
@@ -65,7 +66,7 @@ fun TeamCard(
             ) {
                 Image(
                     painter = painterResource(id = imageRes),
-                    contentDescription = team.name,
+                    contentDescription = team.name ?: "Team",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -87,7 +88,7 @@ fun TeamCard(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            team.name,
+                            team.name ?: "Riding Crew",
                             color = Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
@@ -102,7 +103,7 @@ fun TeamCard(
                         }
                     }
                     Text(
-                        "${team.dates} • ${team.route}",
+                        "${team.dates ?: "Upcoming"} • ${team.route ?: "Scenic Highway"}",
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 11.sp
                     )
@@ -134,7 +135,7 @@ fun TeamCard(
                 }
 
                 Text(
-                    team.description,
+                    team.description ?: "",
                     fontSize = 12.sp,
                     color = if (isDark) DarkTextSecondary else Color.Gray
                 )

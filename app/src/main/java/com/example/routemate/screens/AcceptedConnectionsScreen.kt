@@ -533,7 +533,7 @@ private fun AcceptedConnectionCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = connection.partner_name.take(2).uppercase(),
+                            text = (connection.partner_name ?: "RM").take(2).uppercase(),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 17.sp

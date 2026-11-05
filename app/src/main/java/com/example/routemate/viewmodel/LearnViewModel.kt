@@ -13,6 +13,8 @@ import kotlinx.coroutines.launch
 data class LearnUiState(
     val resources: List<LearningResourceDto> = emptyList(),
     val isLoading: Boolean = false,
+    val completingId: Int? = null,
+    val successMessage: String? = null,
     val errorMessage: String? = null
 )
 
@@ -52,6 +54,40 @@ class LearnViewModel(
                 }
             )
         }
+    }
+
+    fun markCompleted(resourceId: Int) {
+        _uiState.update { it.copy(completingId = resourceId, successMessage = null, errorMessage = null) }
+
+        viewModelScope.launch {
+            val result = repository.saveProgress(resourceId)
+            result.fold(
+                onSuccess = {
+                    _uiState.update { state ->
+                        val updated = state.resources.map { item ->
+                            if (item.id == resourceId) item.copy(completed = true) else item
+                        }
+                        state.copy(
+                            resources = updated,
+                            completingId = null,
+                            successMessage = "Lesson progress saved to MySQL database ✓"
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            completingId = null,
+                            errorMessage = error.localizedMessage ?: "Failed to save learning progress"
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    fun clearSuccessMessage() {
+        _uiState.update { it.copy(successMessage = null) }
     }
 }
 

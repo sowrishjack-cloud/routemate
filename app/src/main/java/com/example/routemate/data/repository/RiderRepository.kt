@@ -22,17 +22,17 @@ class RiderRepository {
             if (response.isSuccess && response.data != null) {
                 val riders = response.data.map { dto ->
                     Rider(
-                        id = dto.id,
-                        name = dto.name,
-                        destination = dto.destination,
-                        dates = dto.dates,
-                        level = dto.level,
-                        budget = dto.budget,
-                        description = dto.description,
-                        startingPoint = dto.startingPoint,
-                        distance = dto.distance,
-                        duration = dto.duration,
-                        meetingPoint = dto.meetingPoint,
+                        id = dto.safeId,
+                        name = dto.safeName,
+                        destination = dto.safeDestination,
+                        dates = dto.safeDates,
+                        level = dto.safeLevel,
+                        budget = dto.safeBudget,
+                        description = dto.safeDescription,
+                        startingPoint = dto.safeStartingPoint,
+                        distance = dto.safeDistance,
+                        duration = dto.safeDuration,
+                        meetingPoint = dto.safeMeetingPoint,
                         isVerified = dto.isVerified
                     )
                 }

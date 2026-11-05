@@ -33,6 +33,16 @@ object RetrofitClient {
         }
     }
 
+    fun resolveMediaUrl(urlOrPath: String?): String? {
+        if (urlOrPath.isNullOrBlank()) return null
+        if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")) {
+            return urlOrPath
+        }
+        val cleanPath = urlOrPath.removePrefix("/")
+        val base = ApiConstants.BASE_URL
+        return if (base.endsWith("/")) base + cleanPath else "$base/$cleanPath"
+    }
+
     private fun buildRetrofit(): Retrofit {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -45,9 +55,10 @@ object RetrofitClient {
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .writeTimeout(10, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(20, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .build()
 
         return Retrofit.Builder()

@@ -63,21 +63,21 @@ class RiderController {
         // Map numeric ID to string format matching frontend Rider model
         $formatted = array_map(function($r) {
             return [
-                'id' => (string)$r['id'],
-                'name' => $r['name'],
-                'destination' => $r['destination'],
-                'dates' => $r['dates'],
-                'level' => $r['level'],
-                'budget' => (int)$r['budget'],
-                'description' => $r['description'],
-                'startingPoint' => $r['startingPoint'],
-                'distance' => $r['distance'],
-                'duration' => $r['duration'],
-                'meetingPoint' => $r['meetingPoint'],
-                'riderCount' => $r['riderCount'],
+                'id' => (string)($r['id'] ?? '1'),
+                'name' => !empty($r['name']) ? (string)$r['name'] : 'Rider',
+                'destination' => !empty($r['destination']) ? (string)$r['destination'] : 'Scenic Route',
+                'dates' => !empty($r['dates']) ? (string)$r['dates'] : 'Upcoming',
+                'level' => !empty($r['level']) ? (string)$r['level'] : 'Moderate',
+                'budget' => (int)($r['budget'] ?? 2000),
+                'description' => (string)($r['description'] ?? 'Motorcycle tourer ready to ride.'),
+                'startingPoint' => !empty($r['startingPoint']) ? (string)$r['startingPoint'] : 'Chennai',
+                'distance' => !empty($r['distance']) ? (string)$r['distance'] : '150 km',
+                'duration' => !empty($r['duration']) ? (string)$r['duration'] : '3 hrs',
+                'meetingPoint' => !empty($r['meetingPoint']) ? (string)$r['meetingPoint'] : 'Starting Point',
+                'riderCount' => !empty($r['riderCount']) ? (string)$r['riderCount'] : '1 rider',
                 'avatarUrl' => $r['avatar_url'] ?? 'ic_avatar_1',
                 'isVerified' => (bool)($r['is_verified'] ?? false),
-                'status' => $r['status']
+                'status' => !empty($r['status']) ? (string)$r['status'] : 'open'
             ];
         }, $riders);
 

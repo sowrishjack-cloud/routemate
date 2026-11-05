@@ -149,6 +149,10 @@ if (($requestMethod === 'POST' || $requestMethod === 'PUT') && $path === 'api/pr
     (new \RouteMate\Controllers\ProfileController())->saveProfile();
 }
 
+if ($requestMethod === 'POST' && ($path === 'api/profile/photo' || $path === 'api/profile/avatar')) {
+    (new \RouteMate\Controllers\ProfileController())->uploadPhoto();
+}
+
 // --- HOME FEED ROUTE (For Android) ---
 if ($requestMethod === 'GET' && $path === 'api/home') {
     (new \RouteMate\Controllers\HomeController())->getFeed();
@@ -382,6 +386,23 @@ if (($requestMethod === 'PUT' || $requestMethod === 'POST') && (preg_match('#^ap
 
 if (($requestMethod === 'PUT' || $requestMethod === 'POST') && (preg_match('#^api/rider-requests/(\d+)/cancel$#', $path, $matches) || preg_match('#^api/ride-requests/(\d+)/cancel$#', $path, $matches))) {
     (new \RouteMate\Controllers\RideRequestController())->cancel((int)$matches[1]);
+}
+
+// --- FILE STORAGE DELIVERY ROUTE ---
+if ($requestMethod === 'GET' && preg_match('#^api/uploads/([a-zA-Z0-9_\-]+)/([a-zA-Z0-9_\-\.]+)$#', $path, $matches)) {
+    $folder = $matches[1];
+    $filename = basename($matches[2]);
+    $filePath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . $folder . DIRECTORY_SEPARATOR . $filename;
+
+    if (file_exists($filePath)) {
+        $mime = mime_content_type($filePath) ?: 'application/octet-stream';
+        header("Content-Type: {$mime}");
+        header('Content-Length: ' . filesize($filePath));
+        header('Cache-Control: public, max-age=86400');
+        readfile($filePath);
+        exit;
+    }
+    \RouteMate\Helpers\Response::error('File not found', 404);
 }
 
 // 8. 404 Not Found
