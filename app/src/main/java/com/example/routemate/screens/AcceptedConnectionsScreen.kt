@@ -335,7 +335,7 @@ fun AcceptedConnectionsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Starting Point: ${conn.start_location}", fontWeight = FontWeight.Bold)
-                    Text("Meeting Location: NH Highway Toll Plaza / Fuel Station", fontSize = 13.sp)
+                    Text("Meeting Location: Highway Convergence Point (${conn.start_location} → ${conn.destination})", fontSize = 13.sp)
                     Text("Departure Time: Early Morning (05:30 AM)", fontSize = 13.sp)
                     Text("Destination: ${conn.destination}", fontSize = 13.sp)
                 }

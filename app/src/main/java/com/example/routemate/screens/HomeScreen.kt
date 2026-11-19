@@ -56,7 +56,17 @@ import kotlinx.coroutines.delay
 data class PopularDestination(
     val name: String,
     val description: String,
-    val imageRes: Int
+    val imageRes: Int,
+    val subtitle: String = "",
+    val state: String = "",
+    val region: String = "India",
+    val category: String = "Mountain & Hill",
+    val altitudeMeters: Int = 0,
+    val difficulty: String = "Moderate",
+    val permitRequired: String = "None",
+    val hasAmsWarning: Boolean = false,
+    val isFeatured: Boolean = false,
+    val id: Int = 0
 )
 
 data class RecommendedRide(
@@ -69,7 +79,7 @@ data class RecommendedRide(
     val destination: String = "Pondicherry",
     val startingPoint: String = "Chennai",
     val duration: String = "3.5 hrs",
-    val meetingPoint: String = "ECR Toll Gate, Chennai",
+    val meetingPoint: String = "",
     val title: String = "Chennai → Pondicherry"
 )
 
@@ -84,7 +94,7 @@ data class NearbyRiderItem(
     val duration: String = "3.5 hrs",
     val budget: Int = 2500,
     val startingPoint: String = "Chennai",
-    val meetingPoint: String = "ECR Toll Gate, Chennai",
+    val meetingPoint: String = "",
     val riderCount: String = "4 / 6 riders",
     val title: String = "Rider Journey"
 )
@@ -104,6 +114,10 @@ fun HomeScreen(
     isTabActive: Boolean = true,
     onOpenEmergencySos: () -> Unit = {},
     onOpenIncomingRequests: () -> Unit = {},
+    onOpenAiAssistant: () -> Unit = {},
+    onOpenAiPlanner: () -> Unit = {},
+    onOpenAiSavedPlans: () -> Unit = {},
+    onOpenDiscoverDestinations: (String?) -> Unit = {},
     homeViewModel: HomeViewModel = viewModel()
 ) {
     val homeUiState by homeViewModel.uiState.collectAsState()
@@ -158,7 +172,9 @@ fun HomeScreen(
         TopHeader(
             onNavigateToTab = onNavigateToTab,
             onOpenEmergencySos = onOpenEmergencySos,
-            onOpenIncomingRequests = onOpenIncomingRequests
+            onOpenIncomingRequests = onOpenIncomingRequests,
+            onOpenAiAssistant = onOpenAiAssistant,
+            onOpenAiPlanner = onOpenAiPlanner
         )
 
         // Test Notification Live Banner if triggered
@@ -230,11 +246,21 @@ fun HomeScreen(
         // 2. Large Automatic Sliding Hero Banner (5 Story-driven Slides)
         HeroBanner(onNavigateToTab = onNavigateToTab, isTabActive = isTabActive)
 
+        // 2.5 AI Motorcycle Travel Assistant Banner
+        AiAssistantBannerCard(
+            onOpenAiAssistant = onOpenAiAssistant,
+            onOpenAiPlanner = onOpenAiPlanner,
+            onOpenAiSavedPlans = onOpenAiSavedPlans
+        )
+
         // 3. Quick Action Cards
         QuickActionSection(onNavigateToTab = onNavigateToTab)
 
         // 4. Popular Destinations Section
-        PopularDestinationsSection(destinations = destinations)
+        PopularDestinationsSection(
+            destinations = destinations,
+            onOpenDiscover = onOpenDiscoverDestinations
+        )
 
         // 5. Recommended Rides
         RecommendedRidesSection(
@@ -282,7 +308,9 @@ fun HomeScreen(
 private fun TopHeader(
     onNavigateToTab: (String) -> Unit,
     onOpenEmergencySos: () -> Unit = {},
-    onOpenIncomingRequests: () -> Unit = {}
+    onOpenIncomingRequests: () -> Unit = {},
+    onOpenAiAssistant: () -> Unit = {},
+    onOpenAiPlanner: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager.getInstance(context) }
@@ -1118,8 +1146,9 @@ private fun TopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
+                HeaderActionIcon(Icons.Default.AutoAwesome, "AI Assistant") { onOpenAiAssistant() }
+                HeaderActionIcon(Icons.Default.Map, "Interactive Map") { onOpenAiPlanner() }
                 HeaderActionIcon(Icons.Default.Settings, "Settings") { activeDialog = "settings" }
-                HeaderActionIcon(Icons.Default.Map, "Map") { activeDialog = "map" }
                 HeaderActionIcon(Icons.Default.Notifications, "Notifications", badgeCount = reqState.pendingCount) { onOpenIncomingRequests() }
                 HeaderActionIcon(Icons.Default.Navigation, "Navigation") { activeDialog = "navigation" }
             }
@@ -1453,7 +1482,10 @@ private fun QuickCard(
 }
 
 @Composable
-private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
+private fun PopularDestinationsSection(
+    destinations: List<PopularDestination>,
+    onOpenDiscover: (String?) -> Unit = {}
+) {
     val isDark = AppSettingsState.isDarkMode
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -1468,10 +1500,14 @@ private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
                 color = if (isDark) DarkTextPrimary else DeepNavy
             )
             Text(
-                "Scenic routes",
+                "Explore 140+ ➔",
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (isDark) Cyan else OceanBlue
+                fontWeight = FontWeight.Bold,
+                color = if (isDark) Cyan else OceanBlue,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onOpenDiscover(null) }
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
             )
         }
 
@@ -1482,8 +1518,9 @@ private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
             items(destinations) { destination ->
                 Card(
                     modifier = Modifier
-                        .width(200.dp)
-                        .height(150.dp),
+                        .width(220.dp)
+                        .height(160.dp)
+                        .clickable { onOpenDiscover(destination.name) },
                     shape = RoundedCornerShape(20.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
@@ -1502,7 +1539,7 @@ private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
                                 .background(
                                     Brush.verticalGradient(
                                         colorStops = arrayOf(
-                                            0.0f to Color.Transparent,
+                                            0.0f to Color.Black.copy(alpha = 0.35f),
                                             0.4f to Color.Black.copy(alpha = 0.15f),
                                             0.7f to DeepNavy.copy(alpha = 0.75f),
                                             1.0f to DeepNavy.copy(alpha = 0.95f)
@@ -1511,9 +1548,52 @@ private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
                                 )
                         )
 
+                        // Top Badges
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (destination.altitudeMeters > 0) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (destination.hasAmsWarning) Color(0xFFE65100).copy(alpha = 0.9f)
+                                    else Color.Black.copy(alpha = 0.6f)
+                                ) {
+                                    Text(
+                                        "⛰️ ${destination.altitudeMeters}m",
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            } else {
+                                Spacer(Modifier.width(1.dp))
+                            }
+
+                            if (destination.difficulty.isNotBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color.Black.copy(alpha = 0.6f)
+                                ) {
+                                    Text(
+                                        destination.difficulty,
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+
                         Column(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxWidth()
+                                .align(Alignment.BottomStart)
                                 .padding(14.dp),
                             verticalArrangement = Arrangement.Bottom
                         ) {
@@ -1523,6 +1603,15 @@ private fun PopularDestinationsSection(destinations: List<PopularDestination>) {
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White
                             )
+                            if (destination.subtitle.isNotBlank()) {
+                                Text(
+                                    destination.subtitle,
+                                    fontSize = 10.sp,
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                             Spacer(Modifier.height(2.dp))
                             Text(
                                 destination.description,
@@ -1972,4 +2061,142 @@ private fun CreateTripDialog(
         }
     )
 }
+
+@Composable
+private fun AiAssistantBannerCard(
+    onOpenAiAssistant: () -> Unit,
+    onOpenAiPlanner: () -> Unit,
+    onOpenAiSavedPlans: () -> Unit
+) {
+    val isDark = AppSettingsState.isDarkMode
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(6.dp, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDark) DarkSurface else Color.White
+        ),
+        border = BorderStroke(1.5.dp, Brush.horizontalGradient(listOf(OceanBlue, Cyan)))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(OceanBlue, Cyan))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "RouteMate AI Assistant",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) Color.White else DeepNavy
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Cyan.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    text = "FREE & SMART",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = OceanBlue,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Routes • Weather • Exact Fuel Budget",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onOpenAiSavedPlans,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Bookmark,
+                        contentDescription = "Saved Plans",
+                        tint = OceanBlue,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Autonomous rule-based engine: calculate turn-by-turn routes on OpenStreetMap, check live rainfall & wind on Open-Meteo, and find compatible riders.",
+                fontSize = 11.sp,
+                lineHeight = 15.sp,
+                color = if (isDark) Color(0xFFCBD5E1) else DeepNavy.copy(alpha = 0.75f)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onOpenAiAssistant,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Chat,
+                        contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Chat Assistant", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = onOpenAiPlanner,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.2.dp, OceanBlue),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AltRoute,
+                        contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                        tint = OceanBlue
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Plan Trip", fontSize = 12.sp, color = OceanBlue, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
 

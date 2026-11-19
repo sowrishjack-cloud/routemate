@@ -546,7 +546,7 @@ private fun CreateTeamDialog(
                     value = startingPoint,
                     onValueChange = { startingPoint = it; validationError = null },
                     label = { Text("Starting Point *") },
-                    placeholder = { Text("e.g. Chennai (ECR Toll Gate)") },
+                    placeholder = { Text("e.g. Chennai Central") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )

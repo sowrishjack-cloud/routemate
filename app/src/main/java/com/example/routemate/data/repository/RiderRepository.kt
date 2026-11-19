@@ -4,6 +4,10 @@ import com.example.routemate.data.remote.NetworkStateHolder
 import com.example.routemate.data.remote.RetrofitClient
 import com.example.routemate.models.Rider
 
+object RiderCache {
+    var cachedRiders: List<Rider> = emptyList()
+}
+
 class RiderRepository {
 
     suspend fun getRiders(
@@ -36,17 +40,26 @@ class RiderRepository {
                         isVerified = dto.isVerified
                     )
                 }
+                RiderCache.cachedRiders = riders
                 NetworkStateHolder.markOnline()
                 Result.success(riders)
             } else {
                 val errorMsg = response.message ?: "Failed to retrieve riders from backend"
                 NetworkStateHolder.markOffline(errorMsg)
-                Result.failure(Exception(errorMsg))
+                if (RiderCache.cachedRiders.isNotEmpty()) {
+                    Result.success(RiderCache.cachedRiders)
+                } else {
+                    Result.failure(Exception(errorMsg))
+                }
             }
         } catch (e: Exception) {
             val errorMsg = e.localizedMessage ?: "Failed to connect to backend server"
             NetworkStateHolder.markOffline(errorMsg)
-            Result.failure(Exception(errorMsg, e))
+            if (RiderCache.cachedRiders.isNotEmpty()) {
+                Result.success(RiderCache.cachedRiders)
+            } else {
+                Result.failure(Exception(errorMsg, e))
+            }
         }
     }
 }

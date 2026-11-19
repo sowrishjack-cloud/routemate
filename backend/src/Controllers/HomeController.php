@@ -11,9 +11,39 @@ class HomeController {
     public function getFeed(): void {
         $db = Database::getConnection();
 
-        // 1. Popular Destinations
-        $destStmt = $db->query('SELECT id, name, description, image_tag AS imageRes, state FROM popular_destinations ORDER BY id ASC');
+        // 1. Popular Destinations (Rich Mountain & Travel Data)
+        $destStmt = $db->query('
+            SELECT id,
+                   name,
+                   subtitle,
+                   description,
+                   image_tag AS imageRes,
+                   state,
+                   region,
+                   category,
+                   latitude,
+                   longitude,
+                   altitude_meters AS altitudeMeters,
+                   difficulty,
+                   recommended_seasons AS recommendedSeasons,
+                   permit_required AS permitRequired,
+                   image_url AS imageUrl,
+                   is_featured AS isFeatured
+            FROM popular_destinations
+            ORDER BY popularity_score DESC, altitude_meters DESC
+            LIMIT 25
+        ');
         $destinations = $destStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Cast numeric fields
+        foreach ($destinations as &$dest) {
+            $dest['id'] = (int)$dest['id'];
+            $dest['altitudeMeters'] = (int)($dest['altitudeMeters'] ?? 0);
+            $dest['latitude'] = isset($dest['latitude']) ? (float)$dest['latitude'] : 0.0;
+            $dest['longitude'] = isset($dest['longitude']) ? (float)$dest['longitude'] : 0.0;
+            $dest['isFeatured'] = (bool)($dest['isFeatured'] ?? false);
+        }
+        unset($dest);
 
         // 2. Recommended Rides (Trips)
         $ridesStmt = $db->query('
@@ -30,8 +60,8 @@ class HomeController {
                    title
             FROM trips
             WHERE status = "open"
-            ORDER BY id ASC
-            LIMIT 4
+            ORDER BY id DESC
+            LIMIT 6
         ');
         $recommendedRides = $ridesStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -66,4 +96,3 @@ class HomeController {
         ], 'Home screen feed retrieved');
     }
 }
-

@@ -21,7 +21,17 @@ class HomeRepository {
                     PopularDestination(
                         name = d.safeName,
                         description = d.safeDescription,
-                        imageRes = mapDestinationImage(d.safeName)
+                        imageRes = mapDestinationImage(d.safeName),
+                        subtitle = d.safeSubtitle,
+                        state = d.safeState,
+                        region = d.safeRegion,
+                        category = d.safeCategory,
+                        altitudeMeters = d.safeAltitude,
+                        difficulty = d.safeDifficulty,
+                        permitRequired = d.safePermit,
+                        hasAmsWarning = d.isHighAltitude,
+                        isFeatured = d.isFeatured,
+                        id = d.id
                     )
                 }
 
@@ -72,16 +82,7 @@ class HomeRepository {
     }
 
     private fun mapDestinationImage(name: String): Int {
-        return when (name.lowercase()) {
-            "ooty" -> R.drawable.dest_ooty
-            "coorg" -> R.drawable.dest_coorg
-            "munnar" -> R.drawable.dest_munnar
-            "goa" -> R.drawable.dest_goa
-            "araku valley", "araku" -> R.drawable.dest_araku
-            "pondicherry", "pondy" -> R.drawable.dest_pondicherry
-            "yelagiri" -> R.drawable.dest_yelagiri
-            else -> R.drawable.dest_ooty
-        }
+        return com.example.routemate.components.DestinationImageHelper.getDestinationImageRes(name)
     }
 
     private fun mapAvatarImage(res: String?): Int {

@@ -16,17 +16,16 @@ object DestinationImageHelper {
         val dest = destination?.trim()?.lowercase() ?: ""
 
         return when {
-            dest.contains("pondicherry") || dest.contains("puducherry") -> R.drawable.dest_pondicherry
-            dest.contains("ooty") || dest.contains("udhagamandalam") || dest.contains("nilgiri") -> R.drawable.dest_ooty
-            dest.contains("coorg") || dest.contains("kodagu") || dest.contains("madikeri") -> R.drawable.dest_coorg
-            dest.contains("munnar") || dest.contains("idukki") -> R.drawable.dest_munnar
-            dest.contains("ladakh") || dest.contains("leh") || dest.contains("pangong") || dest.contains("khardung") -> R.drawable.dest_leh_ladakh
-            dest.contains("spiti") || dest.contains("kaza") || dest.contains("tabo") -> R.drawable.dest_spiti_valley
-            dest.contains("goa") || dest.contains("panaji") || dest.contains("calangute") -> R.drawable.dest_goa
-            dest.contains("araku") -> R.drawable.dest_araku
-            dest.contains("yelagiri") -> R.drawable.dest_yelagiri
-            dest.contains("kodaikanal") || dest.contains("kodai") -> R.drawable.dest_ooty
-            else -> R.drawable.dest_pondicherry
+            dest.contains("pondicherry") || dest.contains("puducherry") || dest.contains("mahabalipuram") -> R.drawable.dest_pondicherry
+            dest.contains("ooty") || dest.contains("udhagamandalam") || dest.contains("nilgiri") || dest.contains("coonoor") || dest.contains("kodaikanal") || dest.contains("kodai") || dest.contains("yercaud") || dest.contains("kolli") -> R.drawable.dest_ooty
+            dest.contains("coorg") || dest.contains("kodagu") || dest.contains("madikeri") || dest.contains("chikmagalur") || dest.contains("kudremukh") || dest.contains("sakleshpur") || dest.contains("agumbe") -> R.drawable.dest_coorg
+            dest.contains("munnar") || dest.contains("idukki") || dest.contains("wayanad") || dest.contains("vagamon") || dest.contains("valparai") || dest.contains("ponmudi") -> R.drawable.dest_munnar
+            dest.contains("ladakh") || dest.contains("leh") || dest.contains("pangong") || dest.contains("khardung") || dest.contains("umling") || dest.contains("chang la") || dest.contains("hanle") || dest.contains("tso moriri") || dest.contains("zanskar") || dest.contains("kargil") || dest.contains("drass") || dest.contains("sikkim") || dest.contains("gurudongmar") || dest.contains("nathula") || dest.contains("tawang") || dest.contains("sela pass") -> R.drawable.dest_leh_ladakh
+            dest.contains("spiti") || dest.contains("kaza") || dest.contains("tabo") || dest.contains("manali") || dest.contains("atal tunnel") || dest.contains("sissu") || dest.contains("jispa") || dest.contains("keylong") || dest.contains("kunzum") || dest.contains("chandratal") || dest.contains("sach pass") || dest.contains("kinnaur") || dest.contains("chitkul") || dest.contains("chopta") || dest.contains("kedarnath") || dest.contains("badrinath") || dest.contains("auli") || dest.contains("harsil") || dest.contains("tungnath") || dest.contains("srinagar") || dest.contains("gulmarg") || dest.contains("sonamarg") || dest.contains("pahalgam") || dest.contains("gurez") -> R.drawable.dest_spiti_valley
+            dest.contains("goa") || dest.contains("panaji") || dest.contains("calangute") || dest.contains("konkan") || dest.contains("tarkarli") || dest.contains("gokarna") -> R.drawable.dest_goa
+            dest.contains("araku") || dest.contains("lambasingi") -> R.drawable.dest_araku
+            dest.contains("yelagiri") || dest.contains("horsley") || dest.contains("nandi") -> R.drawable.dest_yelagiri
+            else -> R.drawable.dest_leh_ladakh
         }
     }
 

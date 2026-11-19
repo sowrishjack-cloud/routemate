@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Sos
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
@@ -45,6 +46,7 @@ fun TripDetailsScreen(
     riderCount: String,
     onBack: () -> Unit,
     onOpenEmergencySos: () -> Unit = {},
+    onStartLiveNavigation: () -> Unit = {},
     viewModel: TripDetailsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -240,6 +242,24 @@ fun TripDetailsScreen(
                     }
 
                     Spacer(Modifier.height(8.dp))
+
+                    Button(
+                        onClick = onStartLiveNavigation,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Cyan,
+                            contentColor = DeepNavy
+                        )
+                    ) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Start Live GPS Navigation", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                    }
+
+                    Spacer(Modifier.height(4.dp))
 
                     PrimaryButton(
                         text = if (uiState.isLoading) "Submitting Request..." else if (uiState.isRequested) "Requested to Join ✓" else "Request to Join Ride",

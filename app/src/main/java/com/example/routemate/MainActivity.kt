@@ -45,6 +45,11 @@ private val Muted = Color(0xFF657C9D)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            org.maplibre.android.MapLibre.getInstance(applicationContext)
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
         RetrofitClient.initialize(applicationContext)
         setContent {
             RouteMateTheme(darkTheme = AppSettingsState.isDarkMode) {

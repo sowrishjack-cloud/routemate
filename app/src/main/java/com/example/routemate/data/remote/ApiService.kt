@@ -69,6 +69,29 @@ interface ApiService {
     @GET("trips/{id}/status")
     suspend fun getTripStatus(@Path("id") id: String): ApiResponse<TripStatusDto>
 
+    // --- LIVE GPS NAVIGATION & LOCATION SHARING ---
+    @POST("trips/{id}/locations")
+    suspend fun updateLiveLocation(
+        @Path("id") tripId: Int,
+        @Body request: UpdateRiderLocationRequest
+    ): ApiResponse<Unit>
+
+    @GET("trips/{id}/locations")
+    suspend fun getLiveLocations(
+        @Path("id") tripId: Int
+    ): ApiResponse<LiveTripLocationsResponseDto>
+
+    @POST("trips/{id}/stop-sharing")
+    suspend fun stopLocationSharing(
+        @Path("id") tripId: Int
+    ): ApiResponse<Unit>
+
+    @PUT("trips/{id}/meeting-point")
+    suspend fun updateMeetingPoint(
+        @Path("id") tripId: Int,
+        @Body request: UpdateMeetingPointRequest
+    ): ApiResponse<Unit>
+
     // --- LEARNING HUB ---
     @GET("learning")
     suspend fun getLearningResources(): ApiResponse<List<LearningResourceDto>>
@@ -195,5 +218,80 @@ interface ApiService {
 
     @DELETE("rider-requests/connections/{id}")
     suspend fun disconnectConnection(@Path("id") connectionId: Int): ApiResponse<Map<String, Any>>
+
+    // --- AI MOTORCYCLE TRAVEL ASSISTANT ---
+    @POST("ai/ask")
+    suspend fun askAi(@Body request: AiAskRequest): ApiResponse<AiAskResponseData>
+
+    @POST("ai/plan-trip")
+    suspend fun planAiTrip(@Body request: TripPlanRequest): ApiResponse<GeneratedTripPlanDto>
+
+    @GET("ai/suggestions")
+    suspend fun getAiSuggestions(): ApiResponse<List<AiSuggestionDto>>
+
+    @POST("ai/calculate-budget")
+    suspend fun calculateAiBudget(@Body request: Map<String, Any>): ApiResponse<BudgetBreakdownDto>
+
+    @POST("ai/save-plan")
+    suspend fun saveAiTripPlan(@Body planData: Map<String, Any?>): ApiResponse<Map<String, Any>>
+
+    @GET("ai/saved-plans")
+    suspend fun getSavedAiPlans(): ApiResponse<List<SavedPlanSummaryDto>>
+
+    @GET("ai/saved-plans/{id}")
+    suspend fun getSavedAiPlanDetails(@Path("id") id: Int): ApiResponse<Map<String, Any?>>
+
+    @DELETE("ai/saved-plans/{id}")
+    suspend fun deleteSavedAiPlan(@Path("id") id: Int): ApiResponse<Unit>
+
+    @GET("ai/history")
+    suspend fun getAiHistory(): ApiResponse<List<ConversationHistoryDto>>
+
+    @DELETE("ai/history/{id}")
+    suspend fun deleteAiHistory(@Path("id") id: Int): ApiResponse<Unit>
+
+    // --- DESTINATION DISCOVERY & HIMALAYAN EXPEDITIONS ---
+    @GET("destinations")
+    suspend fun getDestinations(
+        @Query("search") search: String? = null,
+        @Query("region") region: String? = null,
+        @Query("state") state: String? = null,
+        @Query("category") category: String? = null,
+        @Query("difficulty") difficulty: String? = null,
+        @Query("season") season: String? = null,
+        @Query("month") month: String? = null,
+        @Query("high_altitude") highAltitude: Boolean? = null,
+        @Query("permit_required") permitRequired: Boolean? = null,
+        @Query("featured") featured: Boolean? = null,
+        @Query("sort") sort: String? = null,
+        @Query("limit") limit: Int = 100,
+        @Query("offset") offset: Int = 0
+    ): ApiResponse<DestinationListData>
+
+    @GET("destinations/{id}")
+    suspend fun getDestinationDetails(
+        @Path("id") id: Int
+    ): ApiResponse<DestinationDetailData>
+
+    @GET("destinations/seasonal")
+    suspend fun getSeasonalDestinations(
+        @Query("month") month: String? = null
+    ): ApiResponse<SeasonalDestinationsData>
+
+    @GET("destinations/categories")
+    suspend fun getDestinationCategories(): ApiResponse<DestinationCategoriesData>
+
+    @GET("destinations/favorites")
+    suspend fun getFavoriteDestinations(): ApiResponse<DestinationListData>
+
+    @POST("destinations/{id}/favorite")
+    suspend fun toggleFavoriteDestination(
+        @Path("id") id: Int
+    ): ApiResponse<ToggleFavoriteData>
+
+    @GET("destinations/search-online")
+    suspend fun searchDestinationsOnline(
+        @Query("q") query: String
+    ): ApiResponse<OnlineSearchResultsData>
 }
 

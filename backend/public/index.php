@@ -158,6 +158,35 @@ if ($requestMethod === 'GET' && $path === 'api/home') {
     (new \RouteMate\Controllers\HomeController())->getFeed();
 }
 
+// --- DESTINATIONS & HIMALAYAS / ADVENTURE ROUTES ---
+if ($requestMethod === 'GET' && $path === 'api/destinations') {
+    (new \RouteMate\Controllers\DestinationController())->index();
+}
+
+if ($requestMethod === 'GET' && $path === 'api/destinations/seasonal') {
+    (new \RouteMate\Controllers\DestinationController())->seasonal();
+}
+
+if ($requestMethod === 'GET' && $path === 'api/destinations/categories') {
+    (new \RouteMate\Controllers\DestinationController())->categories();
+}
+
+if ($requestMethod === 'GET' && $path === 'api/destinations/favorites') {
+    (new \RouteMate\Controllers\DestinationController())->favorites();
+}
+
+if ($requestMethod === 'GET' && $path === 'api/destinations/search-online') {
+    (new \RouteMate\Controllers\DestinationController())->searchOnline();
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/destinations/(\d+)/favorite$#', $path, $matches)) {
+    (new \RouteMate\Controllers\DestinationController())->toggleFavorite((int)$matches[1]);
+}
+
+if ($requestMethod === 'GET' && preg_match('#^api/destinations/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\DestinationController())->show((int)$matches[1]);
+}
+
 // --- RIDERS / MATCH ROUTES (For Android) ---
 if ($requestMethod === 'GET' && $path === 'api/riders') {
     (new \RouteMate\Controllers\RiderController())->index();
@@ -194,6 +223,22 @@ if ($requestMethod === 'POST' && preg_match('#^api/trips/(\d+)/join$#', $path, $
 
 if ($requestMethod === 'GET' && preg_match('#^api/trips/(\d+)/status$#', $path, $matches)) {
     (new \RouteMate\Controllers\TripController())->checkStatus((int)$matches[1]);
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/trips/(\d+)/locations$#', $path, $matches)) {
+    (new \RouteMate\Controllers\TripController())->updateLocation((int)$matches[1]);
+}
+
+if ($requestMethod === 'GET' && preg_match('#^api/trips/(\d+)/locations$#', $path, $matches)) {
+    (new \RouteMate\Controllers\TripController())->getLiveLocations((int)$matches[1]);
+}
+
+if ($requestMethod === 'POST' && preg_match('#^api/trips/(\d+)/stop-sharing$#', $path, $matches)) {
+    (new \RouteMate\Controllers\TripController())->stopLocationSharing((int)$matches[1]);
+}
+
+if ($requestMethod === 'PUT' && preg_match('#^api/trips/(\d+)/meeting-point$#', $path, $matches)) {
+    (new \RouteMate\Controllers\TripController())->updateMeetingPoint((int)$matches[1]);
 }
 
 // --- TEAMS ROUTES ---
@@ -403,6 +448,55 @@ if ($requestMethod === 'GET' && preg_match('#^api/uploads/([a-zA-Z0-9_\-]+)/([a-
         exit;
     }
     \RouteMate\Helpers\Response::error('File not found', 404);
+}
+
+// --- AI MOTORCYCLE TRAVEL ASSISTANT & RECOMMENDATION ENGINE ROUTES ---
+if ($requestMethod === 'POST' && $path === 'api/ai/ask') {
+    (new \RouteMate\Controllers\AiController())->ask();
+}
+
+if ($requestMethod === 'POST' && $path === 'api/ai/plan-trip') {
+    (new \RouteMate\Controllers\AiController())->planTrip();
+}
+
+if ($requestMethod === 'POST' && $path === 'api/ai/recommend-route') {
+    (new \RouteMate\Controllers\AiController())->recommendRoute();
+}
+
+if ($requestMethod === 'POST' && $path === 'api/ai/analyze-weather') {
+    (new \RouteMate\Controllers\AiController())->analyzeWeather();
+}
+
+if ($requestMethod === 'POST' && $path === 'api/ai/calculate-budget') {
+    (new \RouteMate\Controllers\AiController())->calculateBudget();
+}
+
+if ($requestMethod === 'GET' && $path === 'api/ai/suggestions') {
+    (new \RouteMate\Controllers\AiController())->getSuggestions();
+}
+
+if ($requestMethod === 'POST' && $path === 'api/ai/save-plan') {
+    (new \RouteMate\Controllers\AiController())->savePlan();
+}
+
+if ($requestMethod === 'GET' && $path === 'api/ai/saved-plans') {
+    (new \RouteMate\Controllers\AiController())->getSavedPlans();
+}
+
+if ($requestMethod === 'GET' && preg_match('#^api/ai/saved-plans/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\AiController())->getSavedPlanDetails((int)$matches[1]);
+}
+
+if ($requestMethod === 'DELETE' && preg_match('#^api/ai/saved-plans/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\AiController())->deleteSavedPlan((int)$matches[1]);
+}
+
+if ($requestMethod === 'GET' && $path === 'api/ai/history') {
+    (new \RouteMate\Controllers\AiController())->getHistory();
+}
+
+if ($requestMethod === 'DELETE' && preg_match('#^api/ai/history/(\d+)$#', $path, $matches)) {
+    (new \RouteMate\Controllers\AiController())->deleteHistory((int)$matches[1]);
 }
 
 // 8. 404 Not Found

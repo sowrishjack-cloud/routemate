@@ -123,15 +123,143 @@ data class HomeFeedDto(
 data class DestinationDto(
     @SerializedName("id") val id: Int = 0,
     @SerializedName("name") val name: String? = "Destination",
+    @SerializedName("subtitle") val subtitle: String? = null,
     @SerializedName("description") val description: String? = "",
     @SerializedName("imageRes") val imageRes: String? = "",
-    @SerializedName("state") val state: String? = ""
+    @SerializedName("state") val state: String? = "",
+    @SerializedName("region") val region: String? = "India",
+    @SerializedName("category") val category: String? = "Mountain & Hill",
+    @SerializedName("latitude") val latitude: Double? = 0.0,
+    @SerializedName("longitude") val longitude: Double? = 0.0,
+    @SerializedName("altitudeMeters") val altitudeMeters: Int? = 0,
+    @SerializedName("difficulty") val difficulty: String? = "Moderate",
+    @SerializedName("recommendedSeasons") val recommendedSeasons: String? = "All Year",
+    @SerializedName("bestMonths") val bestMonths: String? = "Jan-Dec",
+    @SerializedName("roadAccessibility") val roadAccessibility: String? = null,
+    @SerializedName("permitRequired") val permitRequired: String? = "None",
+    @SerializedName("hasAmsWarning") val hasAmsWarning: Boolean = false,
+    @SerializedName("acclimatizationWarning") val acclimatizationWarning: String? = null,
+    @SerializedName("weatherAdvisory") val weatherAdvisory: String? = null,
+    @SerializedName("estimatedBudgetMin") val estimatedBudgetMin: Int? = 3000,
+    @SerializedName("estimatedBudgetMax") val estimatedBudgetMax: Int? = 12000,
+    @SerializedName("popularityScore") val popularityScore: Int? = 85,
+    @SerializedName("imageTag") val imageTag: String? = null,
+    @SerializedName("imageUrl") val imageUrl: String? = null,
+    @SerializedName("isFeatured") val isFeatured: Boolean = false,
+    @SerializedName("isFavorite") val isFavorite: Boolean = false,
+    @SerializedName("source") val source: String? = null,
+    @SerializedName("isCurated") val isCurated: Boolean = true
 ) {
     val safeName: String get() = if (name.isNullOrBlank()) "Destination" else name
+    val safeSubtitle: String get() = subtitle ?: ""
     val safeDescription: String get() = description ?: ""
     val safeImageRes: String get() = imageRes ?: ""
     val safeState: String get() = state ?: ""
+    val safeRegion: String get() = if (region.isNullOrBlank()) "India" else region
+    val safeCategory: String get() = if (category.isNullOrBlank()) "Mountain & Hill" else category
+    val safeAltitude: Int get() = altitudeMeters ?: 0
+    val safeDifficulty: String get() = if (difficulty.isNullOrBlank()) "Moderate" else difficulty
+    val safePermit: String get() = if (permitRequired.isNullOrBlank()) "None" else permitRequired
+    val isHighAltitude: Boolean get() = safeAltitude >= 3000 || hasAmsWarning
+    val safeBudgetMin: Int get() = estimatedBudgetMin ?: 3000
+    val safeBudgetMax: Int get() = estimatedBudgetMax ?: 12000
 }
+
+data class DestinationListData(
+    @SerializedName("total") val total: Int = 0,
+    @SerializedName("limit") val limit: Int = 100,
+    @SerializedName("offset") val offset: Int = 0,
+    @SerializedName("count") val count: Int = 0,
+    @SerializedName("destinations") val destinations: List<DestinationDto> = emptyList()
+)
+
+data class AmsGuidelinesDto(
+    @SerializedName("isHighAltitude") val isHighAltitude: Boolean = false,
+    @SerializedName("altitudeMeters") val altitudeMeters: Int = 0,
+    @SerializedName("riskLevel") val riskLevel: String = "Low",
+    @SerializedName("acclimatizationProtocol") val acclimatizationProtocol: String = "",
+    @SerializedName("hydration") val hydration: String = "",
+    @SerializedName("symptomWarning") val symptomWarning: String = "",
+    @SerializedName("emergencyMedication") val emergencyMedication: String = ""
+)
+
+data class DestinationDetailData(
+    @SerializedName("id") val id: Int = 0,
+    @SerializedName("name") val name: String? = "Destination",
+    @SerializedName("subtitle") val subtitle: String? = null,
+    @SerializedName("description") val description: String? = "",
+    @SerializedName("state") val state: String? = "",
+    @SerializedName("region") val region: String? = "India",
+    @SerializedName("category") val category: String? = "Mountain & Hill",
+    @SerializedName("latitude") val latitude: Double? = 0.0,
+    @SerializedName("longitude") val longitude: Double? = 0.0,
+    @SerializedName("altitudeMeters") val altitudeMeters: Int? = 0,
+    @SerializedName("difficulty") val difficulty: String? = "Moderate",
+    @SerializedName("recommendedSeasons") val recommendedSeasons: String? = "All Year",
+    @SerializedName("bestMonths") val bestMonths: String? = "Jan-Dec",
+    @SerializedName("roadAccessibility") val roadAccessibility: String? = null,
+    @SerializedName("permitRequired") val permitRequired: String? = "None",
+    @SerializedName("hasAmsWarning") val hasAmsWarning: Boolean = false,
+    @SerializedName("acclimatizationWarning") val acclimatizationWarning: String? = null,
+    @SerializedName("weatherAdvisory") val weatherAdvisory: String? = null,
+    @SerializedName("estimatedBudgetMin") val estimatedBudgetMin: Int? = 3000,
+    @SerializedName("estimatedBudgetMax") val estimatedBudgetMax: Int? = 12000,
+    @SerializedName("popularityScore") val popularityScore: Int? = 85,
+    @SerializedName("imageTag") val imageTag: String? = null,
+    @SerializedName("imageUrl") val imageUrl: String? = null,
+    @SerializedName("isFeatured") val isFeatured: Boolean = false,
+    @SerializedName("isFavorite") val isFavorite: Boolean = false,
+    @SerializedName("amsGuidelines") val amsGuidelines: AmsGuidelinesDto? = null,
+    @SerializedName("motorcycleReadiness") val motorcycleReadiness: List<String> = emptyList(),
+    @SerializedName("nearbyDestinations") val nearbyDestinations: List<DestinationDto> = emptyList()
+)
+
+data class SeasonalDestinationsData(
+    @SerializedName("month") val month: String = "",
+    @SerializedName("seasonTitle") val seasonTitle: String = "",
+    @SerializedName("seasonSummary") val seasonSummary: String = "",
+    @SerializedName("ridingAdvice") val ridingAdvice: String = "",
+    @SerializedName("recommendedRegions") val recommendedRegions: List<String> = emptyList(),
+    @SerializedName("avoidRegions") val avoidRegions: List<String> = emptyList(),
+    @SerializedName("destinationsCount") val destinationsCount: Int = 0,
+    @SerializedName("destinations") val destinations: List<DestinationDto> = emptyList()
+)
+
+data class RegionCountDto(
+    @SerializedName("region") val region: String = "",
+    @SerializedName("count") val count: Int = 0,
+    @SerializedName("max_altitude") val maxAltitude: Int? = 0
+)
+
+data class CategoryCountDto(
+    @SerializedName("category") val category: String = "",
+    @SerializedName("count") val count: Int = 0
+)
+
+data class DifficultyCountDto(
+    @SerializedName("difficulty") val difficulty: String = "",
+    @SerializedName("count") val count: Int = 0
+)
+
+data class DestinationCategoriesData(
+    @SerializedName("totalDestinations") val totalDestinations: Int = 0,
+    @SerializedName("highAltitudeDestinations") val highAltitudeDestinations: Int = 0,
+    @SerializedName("regions") val regions: List<RegionCountDto> = emptyList(),
+    @SerializedName("categories") val categories: List<CategoryCountDto> = emptyList(),
+    @SerializedName("difficulties") val difficulties: List<DifficultyCountDto> = emptyList()
+)
+
+data class ToggleFavoriteData(
+    @SerializedName("destinationId") val destinationId: Int = 0,
+    @SerializedName("name") val name: String = "",
+    @SerializedName("isFavorite") val isFavorite: Boolean = false
+)
+
+data class OnlineSearchResultsData(
+    @SerializedName("query") val query: String = "",
+    @SerializedName("total") val total: Int = 0,
+    @SerializedName("results") val results: List<DestinationDto> = emptyList()
+)
 
 data class RecommendedRideDto(
     @SerializedName("id") val id: Int = 0,

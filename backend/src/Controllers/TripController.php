@@ -297,4 +297,141 @@ class TripController {
             'status' => $req ? $req['status'] : null
         ]);
     }
+
+    public function updateLiveLocation(int $tripId): void {
+        $user = AuthMiddleware::authenticate(true);
+        if (!$user) {
+            $db = Database::getConnection();
+            $stmt = $db->query('SELECT id, email, full_name, avatar_url FROM users WHERE id = 1 LIMIT 1');
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        $userId = (int)($user['id'] ?? 1);
+
+        $input = json_decode(file_get_contents('php://input'), true) ?: [];
+        $lat = (float)($input['latitude'] ?? 0.0);
+        $lng = (float)($input['longitude'] ?? 0.0);
+        $speed = (float)($input['speed'] ?? 0.0);
+        $bearing = (float)($input['bearing'] ?? 0.0);
+        $accuracy = (float)($input['accuracy'] ?? 0.0);
+        $isSharing = isset($input['is_sharing']) ? (int)$input['is_sharing'] : 1;
+
+        if ($lat == 0.0 && $lng == 0.0) {
+            Response::error('Invalid GPS coordinates', 422);
+        }
+
+        $db = Database::getConnection();
+        try {
+            $stmt = $db->prepare('
+                INSERT INTO trip_rider_locations
+                    (trip_id, user_id, latitude, longitude, speed, bearing, accuracy, is_sharing, updated_at)
+                VALUES
+                    (:trip_id, :user_id, :lat, :lng, :speed, :bearing, :accuracy, :is_sharing, NOW())
+                ON DUPLICATE KEY UPDATE
+                    latitude = VALUES(latitude),
+                    longitude = VALUES(longitude),
+                    speed = VALUES(speed),
+                    bearing = VALUES(bearing),
+                    accuracy = VALUES(accuracy),
+                    is_sharing = VALUES(is_sharing),
+                    updated_at = NOW()
+            ');
+            $stmt->execute([
+                'trip_id' => $tripId,
+                'user_id' => $userId,
+                'lat' => $lat,
+                'lng' => $lng,
+                'speed' => $speed,
+                'bearing' => $bearing,
+                'accuracy' => $accuracy,
+                'is_sharing' => $isSharing
+            ]);
+
+            Response::success(['trip_id' => $tripId, 'updated' => true], 'Live location updated successfully');
+        } catch (\Exception $e) {
+            Response::error('Failed to update live location: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function getLiveLocations(int $tripId): void {
+        $user = AuthMiddleware::authenticate(false);
+        $db = Database::getConnection();
+
+        // Get Trip details & meeting point
+        $tripStmt = $db->prepare('SELECT id, title, destination, starting_point, meeting_point FROM trips WHERE id = :id LIMIT 1');
+        $tripStmt->execute(['id' => $tripId]);
+        $trip = $tripStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$trip) {
+            Response::error('Trip not found', 404);
+        }
+
+        // Get live rider locations updated within last 15 minutes
+        $stmt = $db->prepare('
+            SELECT l.*, u.full_name AS user_name, u.avatar_url AS user_avatar,
+                   (l.updated_at >= NOW() - INTERVAL 2 MINUTE) AS is_online,
+                   TIMESTAMPDIFF(SECOND, l.updated_at, NOW()) AS updated_seconds_ago
+            FROM trip_rider_locations l
+            JOIN users u ON l.user_id = u.id
+            WHERE l.trip_id = :trip_id AND l.is_sharing = 1
+            ORDER BY l.updated_at DESC
+        ');
+        $stmt->execute(['trip_id' => $tripId]);
+        $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        Response::success([
+            'trip_id' => $tripId,
+            'title' => $trip['title'],
+            'destination' => $trip['destination'],
+            'starting_point' => $trip['starting_point'],
+            'meeting_point' => $trip['meeting_point'],
+            'riders' => array_map(function($r) {
+                return [
+                    'user_id' => (int)$r['user_id'],
+                    'user_name' => $r['user_name'],
+                    'user_avatar' => $r['user_avatar'] ?? 'ic_avatar_1',
+                    'latitude' => (float)$r['latitude'],
+                    'longitude' => (float)$r['longitude'],
+                    'speed' => (float)$r['speed'],
+                    'bearing' => (float)$r['bearing'],
+                    'accuracy' => (float)$r['accuracy'],
+                    'is_sharing' => (bool)$r['is_sharing'],
+                    'is_online' => (bool)$r['is_online'],
+                    'updated_at' => $r['updated_at'],
+                    'updated_seconds_ago' => (int)$r['updated_seconds_ago']
+                ];
+            }, $riders)
+        ], 'Live rider locations retrieved');
+    }
+
+    public function stopSharing(int $tripId): void {
+        $user = AuthMiddleware::authenticate(true);
+        if (!$user) {
+            $db = Database::getConnection();
+            $stmt = $db->query('SELECT id FROM users WHERE id = 1 LIMIT 1');
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        $userId = (int)($user['id'] ?? 1);
+
+        $db = Database::getConnection();
+        $stmt = $db->prepare('UPDATE trip_rider_locations SET is_sharing = 0 WHERE trip_id = :trip_id AND user_id = :user_id');
+        $stmt->execute(['trip_id' => $tripId, 'user_id' => $userId]);
+
+        Response::success(['trip_id' => $tripId, 'sharing_stopped' => true], 'Stopped location sharing');
+    }
+
+    public function updateMeetingPoint(int $tripId): void {
+        $user = AuthMiddleware::authenticate(false);
+        $input = json_decode(file_get_contents('php://input'), true) ?: [];
+        $meetingPoint = trim((string)($input['meeting_point'] ?? ''));
+
+        if (empty($meetingPoint)) {
+            Response::error('Meeting point required', 422);
+        }
+
+        $db = Database::getConnection();
+        $stmt = $db->prepare('UPDATE trips SET meeting_point = :meeting_point WHERE id = :id');
+        $stmt->execute(['meeting_point' => $meetingPoint, 'id' => $tripId]);
+
+        Response::success(['trip_id' => $tripId, 'meeting_point' => $meetingPoint], 'Meeting point updated');
+    }
 }

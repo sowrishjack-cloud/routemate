@@ -68,8 +68,10 @@ object ApiConstants {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val savedUrl = prefs.getString(KEY_BASE_URL, null)
 
-        // Self-healing: If a physical device previously had "10.0.2.2" saved, clear it and use the real LAN IP!
-        val resolvedUrl = if (!isEmulator() && savedUrl != null && savedUrl.contains("10.0.2.2")) {
+        // Self-healing: If a physical device previously had "10.0.2.2" or old IP (e.g. 172.23.176.205) saved, clear it and use the real current LAN IP!
+        val isStaleLan = savedUrl != null && savedUrl.contains("172.23.176.") && !savedUrl.contains("172.23.176.203")
+        val isWrongEmulator = !isEmulator() && savedUrl != null && savedUrl.contains("10.0.2.2")
+        val resolvedUrl = if (isWrongEmulator || isStaleLan) {
             prefs.edit().remove(KEY_BASE_URL).apply()
             getDefaultBaseUrl()
         } else if (!savedUrl.isNullOrBlank()) {
